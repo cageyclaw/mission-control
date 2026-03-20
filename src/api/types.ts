@@ -128,3 +128,11 @@ export interface CostSnapshot {
   totalCost: number;
   byModel: Record<string, number>;
 }
+
+// Context data for entity Q display
+export interface QContextData {
+  contextPercent: number;
+  tokensUsed: number;
+  tokensTotal: number;
+  tokensRemaining: number;
+}

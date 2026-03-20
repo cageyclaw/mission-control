@@ -48,6 +48,14 @@ interface GatewayStore {
   dailyCost: number;
   costHistory: CostSnapshot[];
 
+  // Q Context Data
+  qContextData: {
+    contextPercent: number;
+    tokensUsed: number;
+    tokensTotal: number;
+    tokensRemaining: number;
+  } | null;
+
   // Actions
   setConnected: (connected: boolean) => void;
   updateHealth: (health: GatewayHealth) => void;
@@ -75,6 +83,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   selectedCrewId: null,
   dailyCost: 0,
   costHistory: [],
+  qContextData: null,
 
   // Actions
   setConnected: (connected) => set({ connected }),
@@ -103,12 +112,25 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       contextPercent: sessions.find(s => detectCrew(s.key)?.id === c.id)?.percentUsed,
     }));
 
+    // Extract Q context data (main/webchat session)
+    const qSession = sessions.find(s =>
+      s.key.includes('main') ||
+      s.key.includes('webchat') ||
+      s.agentId === 'main'
+    );
+
     set({
       sessions,
       activeCrew,
       memory: status.memory ?? null,
       security: status.securityAudit ?? null,
       channels: status.channelSummary ?? [],
+      qContextData: qSession ? {
+        contextPercent: qSession.percentUsed,
+        tokensUsed: qSession.totalTokens,
+        tokensTotal: qSession.totalTokens + (qSession.remainingTokens || 0),
+        tokensRemaining: qSession.remainingTokens || 0,
+      } : null,
     });
   },
 

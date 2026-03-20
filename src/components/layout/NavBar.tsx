@@ -1,4 +1,5 @@
 import { useGatewayStore } from '../../stores/gateway';
+import ContextMeter from './ContextMeter';
 import type { View } from '../../api/types';
 
 interface NavItem {
@@ -17,7 +18,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export default function NavBar() {
-  const { activeView, setActiveView } = useGatewayStore();
+  const { activeView, setActiveView, qContextData } = useGatewayStore();
 
   return (
     <nav className="lcars-bottom-bar">
@@ -41,9 +42,19 @@ export default function NavBar() {
         ))}
       </div>
       
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
-      
+      {/* Context Meter */}
+      <div className="lcars-bottom-bar__middle">
+        {qContextData && (
+          <ContextMeter
+            contextPercent={qContextData.contextPercent}
+            tokensUsed={qContextData.tokensUsed}
+            tokensTotal={qContextData.tokensTotal}
+            referenceNumber="47-95"
+          />
+        )}
+        <div className="lcars-bottom-bar__spacer-flex" />
+      </div>
+
       {/* Action buttons */}
       <div className="lcars-bottom-bar__right">
         <button className="lcars-action-button lcars-action-button--red">

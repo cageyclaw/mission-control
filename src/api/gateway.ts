@@ -120,7 +120,6 @@ function sendConnect() {
         id: 'openclaw-control-ui',
         version: '0.1.0',
         platform: 'web',
-        mode: 'control',
       },
       role: 'control',
       scopes: [],
