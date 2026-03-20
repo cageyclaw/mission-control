@@ -437,18 +437,19 @@ body {
 
 /* Context Meter Component */
 .context-meter {
-  width: 80px;
+  width: 400px;
   height: 56px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 12px;
   position: relative;
   cursor: pointer;
   background: var(--lcars-panel);
   border-radius: 8px;
   border: 1px solid var(--lcars-border);
-  padding: 4px;
+  padding: 8px 16px;
 }
 
 .context-meter:hover {
@@ -456,24 +457,24 @@ body {
   background: var(--lcars-panel-light);
 }
 
-/* Vertical Bar Container */
+/* Horizontal Bar Container */
 .context-meter__bar-container {
-  width: 24px;
-  height: 36px;
+  width: 280px;
+  height: 24px;
   background: var(--lcars-border);
   border-radius: 4px;
   overflow: hidden;
   position: relative;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: row;
 }
 
 /* The Fill Bar */
 .context-meter__fill {
-  width: 100%;
-  border-radius: 0 0 4px 4px;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
   transition:
-    height 300ms ease,
+    width 300ms ease,
     background-color 300ms ease,
     box-shadow 300ms ease;
 }
@@ -490,20 +491,20 @@ body {
 /* Percentage Label */
 .context-meter__percent {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: var(--lcars-text-muted);
-  margin-top: 2px;
+  font-size: 12px;
+  color: var(--lcars-text);
+  font-weight: 600;
 }
 
 /* Title Label */
 .context-meter__title {
   font-family: 'Antonio', sans-serif;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 2px;
   color: var(--lcars-text-dim);
   text-transform: uppercase;
-  margin-bottom: 2px;
+  white-space: nowrap;
 }
 
 /* Reference Number */

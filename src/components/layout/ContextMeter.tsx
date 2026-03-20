@@ -32,7 +32,7 @@ export default function ContextMeter({
     }
   }, [alertLevel]);
 
-  const fillHeight = Math.min(Math.max(contextPercent, 0), 100);
+  const fillWidth = Math.min(Math.max(contextPercent, 0), 100);
   
   const alertClass = alertLevel !== 'normal' 
     ? `context-meter__fill--${alertLevel}` 
@@ -56,7 +56,7 @@ export default function ContextMeter({
         <div
           className={`context-meter__fill ${alertClass}`}
           style={{
-            height: `${fillHeight}%`,
+            width: `${fillWidth}%`,
             backgroundColor: displayColor,
           }}
         />
