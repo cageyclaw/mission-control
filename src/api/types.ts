@@ -112,13 +112,67 @@ export interface CrewMember {
   contextPercent?: number;
 }
 
+export type FeedEntryType =
+  | 'spawn'        // Subagent spawned
+  | 'complete'     // Task completed
+  | 'tool'         // Tool invocation (exec, read, write, etc.)
+  | 'file'         // File operation (read/write/edit)
+  | 'process'      // Process execution
+  | 'search'       // Web search
+  | 'message'      // Chat message
+  | 'cron'         // Cron job
+  | 'error'        // Error occurred
+  | 'system';      // System event
+
+export interface ToolInvocation {
+  tool: string;           // Tool name: exec, read, write, web_search, etc.
+  params?: Record<string, any>;  // Tool parameters (sanitized)
+  summary?: string;       // Human-readable summary
+}
+
+export interface FileOperation {
+  operation: 'read' | 'write' | 'edit';
+  path: string;
+  size?: number;
+}
+
+export interface ProcessExecution {
+  command: string;
+  workingDir?: string;
+  durationMs?: number;
+}
+
 export interface FeedEntry {
   id: string;
   timestamp: number;
   crewId: string;
   crewEmoji: string;
+  type: FeedEntryType;
+  
+  // Primary display content
   content: string;
-  type: 'tool' | 'message' | 'spawn' | 'completion' | 'error';
+  
+  // Rich activity data
+  task?: string;                    // Current task being worked on
+  toolInvocation?: ToolInvocation;    // Tool call details
+  fileOperation?: FileOperation;      // File operation details
+  processExecution?: ProcessExecution; // Process execution details
+  
+  // Status/progress
+  status?: 'pending' | 'running' | 'success' | 'error';
+  progress?: number;                // 0-100 for long-running tasks
+  
+  // Grouping/collapsing
+  groupKey?: string;                // Key for grouping similar events
+  isGrouped?: boolean;              // Whether this entry is part of a group
+  groupCount?: number;              // Number of events in this group
+}
+
+export interface FeedFilter {
+  types?: FeedEntryType[];
+  crewIds?: string[];
+  searchQuery?: string;
+  timeRange?: '1h' | '24h' | '7d' | 'all';
 }
 
 export type View = 'home' | 'crew' | 'cost' | 'system';

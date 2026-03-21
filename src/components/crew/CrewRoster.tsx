@@ -44,9 +44,13 @@ export default function CrewRoster() {
           <div className="lcars-list-item__info">
             <div className="lcars-list-item__name">{member.name}</div>
             <div className="lcars-list-item__role">
-              {member.status === 'active' && member.contextPercent != null
-                ? `${member.role} · ${member.contextPercent}% CTX`
-                : member.role}
+              {member.currentTask
+                ? member.currentTask.length > 30
+                  ? `${member.currentTask.substring(0, 30)}...`
+                  : member.currentTask
+                : member.status === 'active' && member.contextPercent != null
+                  ? `${member.role} · ${member.contextPercent}% CTX`
+                  : member.role}
             </div>
           </div>
         </div>

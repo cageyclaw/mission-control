@@ -12,7 +12,7 @@ import type {
   CostSnapshot,
   StatusData,
 } from '../api/types';
-import { CREW_MEMBERS, detectCrew } from '../utils/crew';
+import { CREW_MEMBERS, detectCrew, registerSubagentWithDualIds, cleanupCompletedSubagents, type SubagentMapping } from '../utils/crew';
 
 interface GatewayStore {
   // Connection
@@ -23,6 +23,12 @@ interface GatewayStore {
   // Sessions
   sessions: Session[];
   activeCrew: CrewMember[];
+
+  // Subagent tracking
+  subagentMappings: Map<string, SubagentMapping>;
+
+  // Active tasks
+  activeTasks: Map<string, FeedEntry>; // crewId -> current task entry
 
   // Memory
   memory: MemoryStatus | null;
@@ -39,6 +45,11 @@ interface GatewayStore {
   // Activity feed
   feed: FeedEntry[];
   maxFeedEntries: number;
+  feedFilter: {
+    types?: string[];
+    crewIds?: string[];
+    searchQuery?: string;
+  };
 
   // UI state
   activeView: View;
@@ -62,6 +73,12 @@ interface GatewayStore {
   updateReady: (ready: GatewayReady) => void;
   updateStatus: (status: StatusData) => void;
   addFeedEntry: (entry: FeedEntry) => void;
+  updateFeedEntry: (id: string, updates: Partial<FeedEntry>) => void;
+  registerSubagent: (sessionKey: string, crewId: string, task?: string) => void;
+  updateSubagentStatus: (sessionKey: string, status: SubagentMapping['status']) => void;
+  updateActiveTask: (crewId: string, entry: FeedEntry) => void;
+  clearFeed: () => void;
+  setFeedFilter: (filter: { types?: string[]; crewIds?: string[]; searchQuery?: string }) => void;
   setActiveView: (view: View) => void;
   selectCrew: (id: string | null) => void;
 }
@@ -73,12 +90,15 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   gatewayReady: null,
   sessions: [],
   activeCrew: CREW_MEMBERS.map(c => ({ ...c, status: 'offline' })),
+  subagentMappings: new Map(),
+  activeTasks: new Map(),
   memory: null,
   security: null,
   models: [],
   channels: [],
   feed: [],
   maxFeedEntries: 100,
+  feedFilter: {},
   activeView: 'home',
   selectedCrewId: null,
   dailyCost: 0,
@@ -92,36 +112,202 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
 
   updateReady: (ready) => set({ gatewayReady: ready }),
 
+  registerSubagent: (sessionKey, crewId, task) => {
+    const sessionId = sessionKey.split(':').pop() || sessionKey;
+    const mapping: SubagentMapping = {
+      sessionId,
+      crewId,
+      spawnedAt: Date.now(),
+      task,
+      status: 'spawning',
+    };
+    set(state => ({
+      subagentMappings: new Map(state.subagentMappings).set(sessionId, mapping),
+    }));
+
+    // Add spawn entry to activity feed
+    const crew = CREW_MEMBERS.find(c => c.id === crewId);
+    if (crew) {
+      get().addFeedEntry({
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        crewId,
+        crewEmoji: crew.emoji,
+        content: task ? `Spawned: ${task.substring(0, 80)}${task.length > 80 ? '...' : ''}` : 'Spawned',
+        type: 'spawn',
+      });
+    }
+  },
+
+  updateSubagentStatus: (sessionKey, status) => {
+    const sessionId = sessionKey.split(':').pop() || sessionKey;
+    set(state => {
+      const mappings = new Map(state.subagentMappings);
+      const mapping = mappings.get(sessionId);
+      if (mapping) {
+        mappings.set(sessionId, { ...mapping, status });
+      }
+      return { subagentMappings: mappings };
+    });
+  },
+
   updateStatus: (status) => {
     const sessions = status.sessions?.recent ?? [];
+    const { subagentMappings, feed } = get();
 
-    // Update crew status based on sessions
-    const crewStatusMap = new Map<string, CrewMember['status']>();
+    // Clean up old completed subagents periodically (once per 5 calls)
+    if (Math.random() < 0.2) {
+      cleanupCompletedSubagents(3600000); // 1 hour TTL
+    }
+
+    // Auto-detect new subagent sessions and register them
+    const newMappings = new Map(subagentMappings);
+    
     sessions.forEach(session => {
-      const crew = detectCrew(session.key);
-      if (crew) {
-        const isActive = session.age < 300000; // active within 5 min
-        crewStatusMap.set(crew.id, isActive ? 'active' : 'idle');
+      if (session.key.includes('subagent')) {
+        const keyUuid = session.key.split(':').pop();
+        const sessionId = session.sessionId;
+        
+        if (keyUuid && !newMappings.has(keyUuid) && !newMappings.has(sessionId)) {
+          // Try to infer crew from session context or recent feed
+          let crewId: string | null = null;
+          let task: string | undefined;
+          
+          // Check if this session appears in a recent spawn entry
+          const recentSpawn = feed.find(e => 
+            e.type === 'spawn' && 
+            e.timestamp > Date.now() - 60000 && // Within last minute
+            e.crewId !== 'unknown'
+          );
+          if (recentSpawn) {
+            crewId = recentSpawn.crewId;
+            task = recentSpawn.task;
+          }
+          
+          // If no spawn entry, try to infer from task using detectCrew
+          if (!crewId && keyUuid) {
+            // detectCrew will auto-register if it can infer a crew
+            const pendingCrew = detectCrew(session.key, undefined, sessionId);
+            if (pendingCrew && pendingCrew.id !== 'unknown') {
+              crewId = pendingCrew.id;
+            }
+          }
+          
+          // Fallback: mark as 'unknown' subagent
+          if (!crewId) {
+            crewId = 'unknown';
+          }
+
+          const mapping: SubagentMapping = {
+            sessionId,
+            crewId,
+            spawnedAt: Date.now() - (session.age || 0),
+            task,
+            status: 'active',
+          };
+          newMappings.set(keyUuid, mapping);
+          newMappings.set(sessionId, mapping);
+          
+          // Also register in the utility registry
+          registerSubagentWithDualIds(keyUuid, sessionId, crewId, task);
+          
+          console.log(`[GatewayStore] Auto-registered ${crewId} for session ${keyUuid.substring(0, 8)}...`);
+        }
       }
     });
 
-    const activeCrew = CREW_MEMBERS.map(c => ({
-      ...c,
-      status: crewStatusMap.get(c.id) ?? 'offline',
-      model: sessions.find(s => detectCrew(s.key)?.id === c.id)?.model,
-      contextPercent: sessions.find(s => detectCrew(s.key)?.id === c.id)?.percentUsed,
-    }));
+    // Build crew status with PROPER session matching
+    const crewStatusMap = new Map<string, { 
+      status: CrewMember['status']; 
+      model?: string;
+      contextPercent?: number;
+      currentTask?: string;
+    }>();
 
-    // Extract Q context data (main/webchat session)
-    const qSession = sessions.find(s =>
-      s.key.includes('main') ||
-      s.key.includes('webchat') ||
-      s.agentId === 'main'
-    );
+    // First: Handle Q (main session) separately
+    // Prioritize agent:main:main or webchat sessions, ignore Telegram sessions for Q
+    const qSession = sessions
+      .filter(s => s.agentId === 'main' && !s.key.includes('subagent'))
+      .sort((a, b) => {
+        // Prefer agent:main:main or webchat sessions
+        const aIsPreferred = a.key === 'agent:main:main' || a.key.includes('webchat');
+        const bIsPreferred = b.key === 'agent:main:main' || b.key.includes('webchat');
+        if (aIsPreferred && !bIsPreferred) return -1;
+        if (!aIsPreferred && bIsPreferred) return 1;
+        // Then prefer most recent (lowest age)
+        return (a.age || Infinity) - (b.age || Infinity);
+      })[0];
+
+    if (qSession) {
+      const age = qSession.age || 0;
+      let qStatus: CrewMember['status'] = 'offline';
+      if (age < 120000) { // 2 minutes = active
+        qStatus = 'active';
+      } else if (age < 600000) { // 10 minutes = idle
+        qStatus = 'idle';
+      }
+
+      crewStatusMap.set('q', {
+        status: qStatus,
+        model: qSession.model,
+        contextPercent: qSession.percentUsed ?? undefined,
+        currentTask: undefined,
+      });
+    }
+
+    // Second: Handle subagents using their SPECIFIC sessions
+    sessions.forEach(session => {
+      if (!session.key.includes('subagent')) return;
+      
+      const keyUuid = session.key.split(':').pop();
+      const sessionId = session.sessionId;
+      
+      // Look up this SPECIFIC session in the registry
+      const mapping = keyUuid ? newMappings.get(keyUuid) : undefined;
+      const mappingBySessionId = newMappings.get(sessionId);
+      const actualMapping = mapping || mappingBySessionId;
+      
+      if (!actualMapping) return;
+      
+      // Determine status based on session age
+      const age = session.age || 0;
+      let crewStatus: CrewMember['status'] = 'offline';
+      
+      if (age < 120000) { // 2 minutes = active
+        crewStatus = 'active';
+      } else if (age < 600000) { // 10 minutes = idle
+        crewStatus = 'idle';
+      }
+
+      // Check if this is a newly spawned subagent
+      if (actualMapping.status === 'spawning') {
+        crewStatus = 'active';
+      }
+
+      // Only set status for the crew this session ACTUALLY belongs to
+      crewStatusMap.set(actualMapping.crewId, {
+        status: crewStatus,
+        model: session.model,
+        contextPercent: session.percentUsed ?? undefined,
+        currentTask: actualMapping.task,
+      });
+    });
+
+    const activeCrew = CREW_MEMBERS.map(c => {
+      const status = crewStatusMap.get(c.id);
+      return {
+        ...c,
+        status: status?.status ?? 'offline',
+        model: status?.model,
+        contextPercent: status?.contextPercent,
+        currentTask: status?.currentTask,
+      };
+    });
 
     set({
       sessions,
       activeCrew,
+      subagentMappings: newMappings,
       memory: status.memory ?? null,
       security: status.securityAudit ?? null,
       channels: status.channelSummary ?? [],
@@ -135,9 +321,51 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   },
 
   addFeedEntry: (entry) => {
-    const { feed, maxFeedEntries } = get();
-    const newFeed = [entry, ...feed].slice(0, maxFeedEntries);
+    const { feed, maxFeedEntries, activeTasks } = get();
+    
+    // If this is a spawn or task entry, update activeTasks
+    if (entry.type === 'spawn' || (entry.task && entry.status === 'running')) {
+      const newActiveTasks = new Map(activeTasks);
+      newActiveTasks.set(entry.crewId, entry);
+      set({ activeTasks: newActiveTasks });
+    }
+    
+    // If this is a completion, remove from activeTasks
+    if (entry.type === 'complete') {
+      const newActiveTasks = new Map(activeTasks);
+      newActiveTasks.delete(entry.crewId);
+      set({ activeTasks: newActiveTasks });
+    }
+    
+    // Add to feed (avoid duplicates for same ID)
+    const exists = feed.some(e => e.id === entry.id);
+    if (!exists) {
+      const newFeed = [entry, ...feed].slice(0, maxFeedEntries);
+      set({ feed: newFeed });
+    }
+  },
+
+  updateFeedEntry: (id, updates) => {
+    const { feed } = get();
+    const newFeed = feed.map(e => 
+      e.id === id ? { ...e, ...updates } : e
+    );
     set({ feed: newFeed });
+  },
+
+  updateActiveTask: (crewId, entry) => {
+    const { activeTasks } = get();
+    const newActiveTasks = new Map(activeTasks);
+    newActiveTasks.set(crewId, entry);
+    set({ activeTasks: newActiveTasks });
+  },
+
+  clearFeed: () => {
+    set({ feed: [], activeTasks: new Map() });
+  },
+
+  setFeedFilter: (filter) => {
+    set({ feedFilter: filter });
   },
 
   setActiveView: (view) => set({ activeView: view }),
