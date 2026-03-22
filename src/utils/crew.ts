@@ -314,3 +314,23 @@ export function stardate(): string {
   const minutes = now.getMinutes();
   return `${year}.${dayOfYear.toString().padStart(3, '0')}.${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}`;
 }
+
+// Get display values for crew member (current or last known)
+export function getDisplayValues(crewMember: import('../api/types').CrewMember): {
+  displayModel: string | undefined;
+  displayContextPercent: number;
+  displayStatus: import('../api/types').CrewMember['status'];
+} {
+  const currentModel = crewMember.model;
+  const currentContextPercent = crewMember.contextPercent ?? 0;
+
+  // Use current values if available, otherwise fall back to last known
+  const displayModel = currentModel ?? crewMember.lastKnownModel;
+  const displayContextPercent = currentModel ? currentContextPercent : (crewMember.lastKnownContextPercent ?? 0);
+
+  return {
+    displayModel,
+    displayContextPercent,
+    displayStatus: crewMember.status
+  };
+}

@@ -110,6 +110,10 @@ export interface CrewMember {
   currentTask?: string;
   tokens?: number;
   contextPercent?: number;
+  // Persistent fields for crash monitoring
+  lastKnownModel?: string;
+  lastKnownContextPercent?: number;
+  lastSeen?: number;
 }
 
 export type FeedEntryType =

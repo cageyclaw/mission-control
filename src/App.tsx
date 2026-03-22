@@ -11,6 +11,7 @@ import CostPanel from './components/panels/CostPanel';
 import NavBar from './components/layout/NavBar';
 import CostView from './components/views/CostView';
 import SystemView from './components/views/SystemView';
+import CrewView from './components/views/CrewView';
 
 function App() {
   const { activeView, connected } = useGatewayStore();
@@ -49,7 +50,7 @@ function App() {
             <div className="lcars-header__status-block">
               <div className={`status-dot ${connected ? 'status-dot--active' : 'status-dot--error'}`} />
               <span className={`lcars-header__status-text ${connected ? 'lcars-header__status-text--online' : 'lcars-header__status-text--offline'}`}>
-                {connected ? 'ONLINE' : 'OFFLINE'}
+                {connected ? 'CONTINUUM' : 'DISRUPTED'}
               </span>
             </div>
             <div className="lcars-stardate">
@@ -136,19 +137,11 @@ function App() {
           <main className="lcars-center-panel" style={{ width: '100%' }}>
             <div className="lcars-center-panel__header">
               <span className="lcars-center-panel__header-number-left">47-60</span>
-              Crew Detail
+              Crew Context Monitor
               <span className="lcars-center-panel__header-number-right">47-61</span>
             </div>
             <div className="lcars-center-panel__content">
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--lcars-text-muted)' }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-                <div style={{ fontSize: 18, fontFamily: 'Antonio', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>
-                  Crew Detail View
-                </div>
-                <div style={{ fontSize: 14 }}>
-                  Click a crew member in the sidebar to view details.
-                </div>
-              </div>
+              <CrewView />
             </div>
           </main>
         )}

@@ -56,29 +56,6 @@ export default function CrewRoster() {
         </div>
       ))}
 
-      {/* Add secondary section header for offline crew */}
-      <div className="lcars-section-header lcars-section-header--purple" style={{ marginTop: 16 }}>
-        <span className="lcars-section-header__number">47-20</span>
-        <span style={{ marginLeft: 8 }}>SYSTEM STATUS</span>
-      </div>
-
-      {/* System Status Summary */}
-      <div style={{ padding: '12px 0', borderBottom: '1px solid var(--lcars-border)' }}>
-        <div className="lcars-status-row">
-          <span className="lcars-status-row__number">47-21</span>
-          <span className="lcars-status-row__label">Gateway</span>
-          <span className="lcars-status-row__value">CONNECTED</span>
-          <span className="status-dot status-dot--active" />
-        </div>
-      </div>
-      <div style={{ padding: '8px 0' }}>
-        <div className="lcars-status-row">
-          <span className="lcars-status-row__number">47-22</span>
-          <span className="lcars-status-row__label">Sessions</span>
-          <span className="lcars-status-row__value">ACTIVE</span>
-          <span className="status-dot status-dot--active" />
-        </div>
-      </div>
     </div>
   );
 }

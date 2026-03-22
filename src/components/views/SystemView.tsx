@@ -31,23 +31,23 @@ export default function SystemView() {
             >
               <span className="lcars-status-row__number">47-{51 + index}</span>
               <span className="lcars-status-row__label" style={{ fontSize: 12 }}>
-                {session.key.split(':').pop()?.toUpperCase()}
+                {session.key?.split(':').pop()?.toUpperCase() ?? 'UNKNOWN'}
               </span>
               <span className="lcars-status-row__value" style={{ fontSize: 10 }}>
-                {session.model.split('/').pop()?.toUpperCase()}
+                {session.model?.split('/').pop()?.toUpperCase() ?? 'UNKNOWN'}
               </span>
               <span style={{ 
                 fontSize: 10, 
                 color: 'var(--lcars-text-dim)',
                 marginRight: 8
               }}>
-                {session.percentUsed}%
+                {session.percentUsed ?? 0}%
               </span>
-              <span className={`status-dot ${session.age < 300000 ? 'status-dot--active' : 'status-dot--idle'}`} />
+              <span className={`status-dot ${(session.age ?? Infinity) < 300000 ? 'status-dot--active' : 'status-dot--idle'}`} />
             </div>
           ))}
 
-          {sessions.length === 0 && (
+          {(sessions?.length ?? 0) === 0 && (
             <div style={{ color: '#666', padding: 20, textAlign: 'center' }}>
               No active sessions
             </div>
@@ -81,7 +81,7 @@ export default function SystemView() {
                 </div>
               </div>
 
-              {gatewayReady.failing.length > 0 && (
+              {(gatewayReady?.failing?.length ?? 0) > 0 && (
                 <div style={{ 
                   marginTop: 8, 
                   padding: 8, 
@@ -93,7 +93,7 @@ export default function SystemView() {
                     FAILING SERVICES
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--lcars-text)' }}>
-                    {gatewayReady.failing.join(', ')}
+                    {gatewayReady?.failing?.join(', ') ?? 'None'}
                   </div>
                 </div>
               )}
@@ -112,29 +112,29 @@ export default function SystemView() {
             <div className="lcars-status-row" style={{ borderBottom: '1px solid var(--lcars-border)' }}>
               <span className="lcars-status-row__number">47-71</span>
               <span className="lcars-status-row__label">Files</span>
-              <span className="lcars-status-row__value">{memory.files}</span>
+              <span className="lcars-status-row__value">{memory?.files ?? 0}</span>
               <span className="status-dot status-dot--active" />
             </div>
 
             <div className="lcars-status-row" style={{ borderBottom: '1px solid var(--lcars-border)' }}>
               <span className="lcars-status-row__number">47-72</span>
               <span className="lcars-status-row__label">Chunks</span>
-              <span className="lcars-status-row__value">{memory.chunks}</span>
+              <span className="lcars-status-row__value">{memory?.chunks ?? 0}</span>
               <span className="status-dot status-dot--active" />
             </div>
 
             <div style={{ padding: '12px 0' }}>
               <div className="lcars-data" style={{ fontSize: 12, marginBottom: 4 }}>
-                Provider: {memory.provider}
+                Provider: {memory?.provider ?? 'Unknown'}
               </div>
               <div className="lcars-data" style={{ fontSize: 12, color: 'var(--lcars-text-muted)', marginBottom: 4 }}>
-                Model: {memory.model}
+                Model: {memory?.model ?? 'Unknown'}
               </div>
               <div className="lcars-data" style={{ fontSize: 11 }}>
-                FTS: {memory.fts.available ? '✓' : '✗'} · Vector: {memory.vector.available ? '✓' : '✗'} ({memory.vector.dims}d)
+                FTS: {memory?.fts?.available ? '✓' : '✗'} · Vector: {memory?.vector?.available ? '✓' : '✗'} ({memory?.vector?.dims ?? 0}d)
               </div>
               <div className="lcars-data" style={{ fontSize: 11, color: 'var(--lcars-text-muted)', marginTop: 4 }}>
-                Cache: {memory.cache.entries} entries · Dirty: {memory.dirty ? '⚠ Yes' : 'No'}
+                Cache: {memory?.cache?.entries ?? 0} entries · Dirty: {memory?.dirty ? '⚠ Yes' : 'No'}
               </div>
             </div>
           </div>
@@ -147,7 +147,7 @@ export default function SystemView() {
             <span style={{ marginLeft: 8 }}>Channels</span>
           </div>
 
-          {channels.length > 0 ? (
+          {(channels?.length ?? 0) > 0 ? (
             channels.map((ch, i) => (
               <div 
                 key={i} 
@@ -181,16 +181,16 @@ export default function SystemView() {
               <span className="lcars-status-row__number">47-91</span>
               <span className="lcars-status-row__label">Critical</span>
               <span className="lcars-status-row__value" style={{ color: 'var(--lcars-red)' }}>
-                {security.summary.critical}
+                {security?.summary?.critical ?? 0}
               </span>
-              <span className={`status-dot ${security.summary.critical > 0 ? 'status-dot--error' : 'status-dot--active'}`} />
+              <span className={`status-dot ${(security?.summary?.critical ?? 0) > 0 ? 'status-dot--error' : 'status-dot--active'}`} />
             </div>
 
             <div className="lcars-status-row" style={{ borderBottom: '1px solid var(--lcars-border)' }}>
               <span className="lcars-status-row__number">47-92</span>
               <span className="lcars-status-row__label">Warnings</span>
               <span className="lcars-status-row__value" style={{ color: 'var(--lcars-yellow)' }}>
-                {security.summary.warn}
+                {security?.summary?.warn ?? 0}
               </span>
               <span className="status-dot status-dot--active" />
             </div>
@@ -199,7 +199,7 @@ export default function SystemView() {
               <span className="lcars-status-row__number">47-93</span>
               <span className="lcars-status-row__label">Info</span>
               <span className="lcars-status-row__value">
-                {security.summary.info}
+                {security?.summary?.info ?? 0}
               </span>
               <span className="status-dot status-dot--active" />
             </div>

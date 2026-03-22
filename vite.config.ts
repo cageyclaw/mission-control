@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: 5180,
     host: '0.0.0.0',
+    allowedHosts: ['lcars.cageycloud.com', 'localhost', '127.0.0.1'],
     proxy: {
       // Proxy gateway health endpoints
       '/healthz': {
@@ -21,6 +22,12 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:5181',
         changeOrigin: true,
+      },
+      // Proxy system metrics server
+      '/metrics': {
+        target: 'http://127.0.0.1:18790',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/metrics/, ''),
       },
     },
   },

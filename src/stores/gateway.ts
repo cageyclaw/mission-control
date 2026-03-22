@@ -67,6 +67,14 @@ interface GatewayStore {
     tokensRemaining: number;
   } | null;
 
+  // System Metrics
+  systemMetrics: {
+    cpu: { usage: number; loadAverage: number[] };
+    memory: { used: number; total: number; percent: number };
+    disk: { used: number; total: number; percent: number };
+    timestamp: number;
+  } | null;
+
   // Actions
   setConnected: (connected: boolean) => void;
   updateHealth: (health: GatewayHealth) => void;
@@ -81,6 +89,9 @@ interface GatewayStore {
   setFeedFilter: (filter: { types?: string[]; crewIds?: string[]; searchQuery?: string }) => void;
   setActiveView: (view: View) => void;
   selectCrew: (id: string | null) => void;
+
+  // System Metrics
+  fetchSystemMetrics: () => Promise<void>;
 }
 
 export const useGatewayStore = create<GatewayStore>((set, get) => ({
@@ -104,6 +115,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   dailyCost: 0,
   costHistory: [],
   qContextData: null,
+  systemMetrics: null,
 
   // Actions
   setConnected: (connected) => set({ connected }),
@@ -159,6 +171,9 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     if (Math.random() < 0.2) {
       cleanupCompletedSubagents(3600000); // 1 hour TTL
     }
+
+    // Get current active crew for last known value preservation
+    const { activeCrew: currentActiveCrew } = get();
 
     // Auto-detect new subagent sessions and register them
     const newMappings = new Map(subagentMappings);
@@ -294,13 +309,29 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     });
 
     const activeCrew = CREW_MEMBERS.map(c => {
-      const status = crewStatusMap.get(c.id);
+      const crewStatus = crewStatusMap.get(c.id);
+      const currentMember = currentActiveCrew.find(m => m.id === c.id);
+      
+      // Determine if this is a fresh session or we're preserving last known
+      const isCurrentlyActive = crewStatus?.status && crewStatus.status !== 'offline';
+      
       return {
         ...c,
-        status: status?.status ?? 'offline',
-        model: status?.model,
-        contextPercent: status?.contextPercent,
-        currentTask: status?.currentTask,
+        status: crewStatus?.status ?? 'offline',
+        model: crewStatus?.model ?? currentMember?.model,
+        contextPercent: crewStatus?.contextPercent ?? currentMember?.contextPercent,
+        currentTask: crewStatus?.currentTask ?? currentMember?.currentTask,
+        
+        // Preserve last known values when going offline
+        lastKnownModel: isCurrentlyActive 
+          ? undefined 
+          : (crewStatus?.model ?? currentMember?.lastKnownModel ?? currentMember?.model),
+        lastKnownContextPercent: isCurrentlyActive 
+          ? undefined 
+          : (crewStatus?.contextPercent ?? currentMember?.lastKnownContextPercent ?? currentMember?.contextPercent),
+        lastSeen: isCurrentlyActive 
+          ? Date.now() 
+          : (currentMember?.lastSeen ?? Date.now()),
       };
     });
 
@@ -371,4 +402,19 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   setActiveView: (view) => set({ activeView: view }),
 
   selectCrew: (id) => set({ selectedCrewId: id }),
+
+  // Fetch system metrics from standalone server
+  fetchSystemMetrics: async () => {
+    try {
+      const response = await fetch('/metrics/api/system/metrics');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const metrics = await response.json();
+      set({ systemMetrics: metrics });
+    } catch (error) {
+      // Silently fail - system metrics server may not be running
+      console.log('[SystemMetrics] Fetch failed:', error);
+    }
+  },
 }));
