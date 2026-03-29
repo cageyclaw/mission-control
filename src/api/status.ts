@@ -2,6 +2,7 @@
 
 import { useGatewayStore } from '../stores/gateway';
 import { registerSubagentWithDualIds } from '../utils/crew';
+import { resolveProxyUrl } from '../config';
 import type { GatewayHealth, GatewayReady, StatusData } from './types';
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -27,7 +28,7 @@ export function stopHealthPolling() {
 
 async function pollHealthz() {
   try {
-    const res = await fetch('/healthz');
+    const res = await fetch(await resolveProxyUrl('/healthz'));
     const health: GatewayHealth = await res.json();
     useGatewayStore.getState().updateHealth(health);
     
@@ -40,7 +41,7 @@ async function pollHealthz() {
     }
 
     // Also try readyz
-    const readyRes = await fetch('/readyz');
+    const readyRes = await fetch(await resolveProxyUrl('/readyz'));
     const ready: GatewayReady = await readyRes.json();
     useGatewayStore.getState().updateReady(ready);
   } catch {
@@ -51,7 +52,7 @@ async function pollHealthz() {
 // Poll full status via proxy server (since WebSocket requires operator scope)
 async function pollStatus() {
   try {
-    const res = await fetch('/api/status');
+    const res = await fetch(await resolveProxyUrl('/api/status'));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const status: StatusData = await res.json();
     useGatewayStore.getState().updateStatus(status);
@@ -64,7 +65,7 @@ async function pollStatus() {
 // Poll subagent runs from the dedicated endpoint
 async function pollSubagents() {
   try {
-    const res = await fetch('/api/subagents');
+    const res = await fetch(await resolveProxyUrl('/api/subagents'));
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     

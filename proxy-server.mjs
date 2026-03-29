@@ -16,15 +16,19 @@
 import { exec } from 'child_process';
 import { createServer } from 'http';
 import { promisify } from 'util';
-import { readFile, watch } from 'fs/promises';
+import { readFile, watch, mkdir, appendFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import os from 'os';
 
 const execAsync = promisify(exec);
 const PORT = 5181;
 
+// Track memory flush state
+let memoryFlushStatus = { lastFlush: null, pending: false };
+
 // Path to OpenClaw config
-const OPENCLAW_DIR = process.env.HOME + '/.openclaw';
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || path.join(os.homedir(), '.openclaw');
 const RUNS_FILE = path.join(OPENCLAW_DIR, 'subagents', 'runs.json');
 
 // Cache for subagent runs
@@ -106,7 +110,7 @@ function inferCrewFromRun(run) {
 const server = createServer(async (req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
@@ -117,13 +121,11 @@ const server = createServer(async (req, res) => {
 
   if (req.url === '/api/status') {
     try {
-      // Suppress stderr warnings (plugin messages) by redirecting to /dev/null
-      const { stdout, stderr } = await execAsync(
+      const { stdout } = await execAsync(
         'openclaw status --json 2>/dev/null',
-        { timeout: 10000, shell: '/bin/bash' }
+        { timeout: 10000 }
       );
-      
-      // Parse to validate JSON
+
       const status = JSON.parse(stdout);
       res.writeHead(200);
       res.end(JSON.stringify(status));
@@ -131,6 +133,30 @@ const server = createServer(async (req, res) => {
       console.error('[proxy] Error:', error.message);
       res.writeHead(500);
       res.end(JSON.stringify({ error: 'Failed to fetch status', details: error.message }));
+    }
+    return;
+  }
+
+  if (req.url === '/healthz') {
+    try {
+      await execAsync('openclaw gateway status >/dev/null 2>&1', { timeout: 5000 });
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, status: 'running' }));
+    } catch {
+      res.writeHead(503);
+      res.end(JSON.stringify({ ok: false, status: 'offline' }));
+    }
+    return;
+  }
+
+  if (req.url === '/readyz') {
+    try {
+      await execAsync('openclaw gateway status >/dev/null 2>&1', { timeout: 5000 });
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, uptimeMs: 0, failing: [] }));
+    } catch {
+      res.writeHead(503);
+      res.end(JSON.stringify({ ok: false, uptimeMs: 0, failing: ['gateway'] }));
     }
     return;
   }
@@ -146,6 +172,116 @@ const server = createServer(async (req, res) => {
   if (req.url === '/api/health') {
     res.writeHead(200);
     res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
+  // RED ALERT: Write memory to daily log
+  if (req.url === '/api/memory/flush' && req.method === 'POST') {
+    try {
+      memoryFlushStatus.pending = true;
+      
+      // Get current date for log file
+      const now = new Date();
+      const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+      const memoryDir = path.join(OPENCLAW_DIR, 'workspace', 'memory');
+      const memoryFile = path.join(memoryDir, `${dateStr}.md`);
+
+      // Ensure memory directory exists
+      await mkdir(memoryDir, { recursive: true });
+
+      // Write RED ALERT memory entry
+      const timestamp = now.toLocaleString('en-US', { timeZone: 'America/Vancouver' });
+      const entry = `\n## RED ALERT - ${timestamp}\n\n- **Triggered by:** Mission Control\n- **Action:** Emergency memory flush and gateway restart\n- **Session:** ${now.toISOString()}\n\n`;
+
+      // Append to memory file
+      await appendFile(memoryFile, entry, 'utf8');
+      
+      memoryFlushStatus.lastFlush = now.toISOString();
+      memoryFlushStatus.pending = false;
+      
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, message: 'Memory flushed', file: memoryFile }));
+    } catch (error) {
+      memoryFlushStatus.pending = false;
+      console.error('[proxy] Memory flush error:', error.message);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Memory flush failed', details: error.message }));
+    }
+    return;
+  }
+
+  // RED ALERT: End all active sessions
+  if (req.url === '/api/session/end' && req.method === 'POST') {
+    try {
+      // Signal all agents to end their sessions
+      const { stdout } = await execAsync(
+        'openclaw sessions list --json 2>/dev/null || echo "[]"',
+        { timeout: 10000 }
+      );
+      
+      const sessions = JSON.parse(stdout || '[]');
+      const endedSessions = [];
+      
+      // End each active session
+      for (const session of sessions) {
+        if (session.status === 'active' || session.status === 'idle') {
+          try {
+            await execAsync(
+              `openclaw sessions end "${session.key}" 2>/dev/null || true`,
+              { timeout: 5000 }
+            );
+            endedSessions.push(session.key);
+          } catch (e) {
+            console.log(`[proxy] Could not end session ${session.key}: ${e.message}`);
+          }
+        }
+      }
+      
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        message: 'Sessions ended',
+        endedCount: endedSessions.length,
+        sessions: endedSessions
+      }));
+    } catch (error) {
+      console.error('[proxy] Session end error:', error.message);
+      // Still return success - sessions may already be ending
+      res.writeHead(200);
+      res.end(JSON.stringify({ ok: true, message: 'Session end signal sent', warning: error.message }));
+    }
+    return;
+  }
+
+  // RED ALERT: Restart gateway
+  if (req.url === '/api/gateway/restart' && req.method === 'POST') {
+    try {
+      // First check if gateway is running
+      const { stdout: statusOut } = await execAsync(
+        'openclaw gateway status 2>&1 || echo "NOT_RUNNING"',
+        { timeout: 5000 }
+      );
+      
+      const wasRunning = !statusOut.includes('NOT_RUNNING') && !statusOut.includes('error');
+      
+      // Restart gateway
+      await execAsync('openclaw gateway restart', { timeout: 30000 });
+      
+      // Wait a moment for restart
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      res.writeHead(200);
+      res.end(JSON.stringify({ 
+        ok: true, 
+        message: 'Gateway restarted',
+        wasRunning,
+        timestamp: new Date().toISOString()
+      }));
+    } catch (error) {
+      console.error('[proxy] Gateway restart error:', error.message);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: 'Gateway restart failed', details: error.message }));
+    }
     return;
   }
 

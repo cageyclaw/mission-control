@@ -322,11 +322,14 @@ export function getDisplayValues(crewMember: import('../api/types').CrewMember):
   displayStatus: import('../api/types').CrewMember['status'];
 } {
   const currentModel = crewMember.model;
-  const currentContextPercent = crewMember.contextPercent ?? 0;
+  const currentContextPercent = crewMember.contextPercent;
 
   // Use current values if available, otherwise fall back to last known
   const displayModel = currentModel ?? crewMember.lastKnownModel;
-  const displayContextPercent = currentModel ? currentContextPercent : (crewMember.lastKnownContextPercent ?? 0);
+  // Use current context if defined (including 0), otherwise fall back to last known
+  const displayContextPercent = currentContextPercent !== undefined 
+    ? currentContextPercent 
+    : (crewMember.lastKnownContextPercent ?? 0);
 
   return {
     displayModel,

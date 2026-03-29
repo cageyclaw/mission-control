@@ -78,15 +78,15 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
   
   return (
     <div
-      className={`lcars-feed-entry ${isActive ? 'lcars-feed-entry--active' : ''}`}
+      className={`occ-feed-entry ${isActive ? 'occ-feed-entry--active' : ''}`}
       style={{
         borderLeft: `3px solid ${typeColor}`,
         opacity: isActive ? 1 : 0.7,
       }}
     >
-      <div className="lcars-feed-entry__header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div className="occ-feed-entry__header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span 
-          className="lcars-feed-entry__crew" 
+          className="occ-feed-entry__crew" 
           style={{ 
             fontSize: 18,
             filter: isActive ? 'none' : 'grayscale(30%)',
@@ -95,7 +95,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
           {entry.crewEmoji}
         </span>
         <span 
-          className="lcars-feed-entry__crew-name"
+          className="occ-feed-entry__crew-name"
           style={{
             fontSize: 12,
             fontWeight: 'bold',
@@ -107,10 +107,10 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
           {crewName}
         </span>
         <span 
-          className="lcars-feed-entry__verb"
+          className="occ-feed-entry__verb"
           style={{
             fontSize: 11,
-            color: 'var(--lcars-text-dim)',
+            color: 'var(--occ-text-dim)',
             fontStyle: 'italic',
           }}
         >
@@ -118,7 +118,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         </span>
         <span style={{ flex: 1 }} />
         <span 
-          className="lcars-feed-entry__type-icon"
+          className="occ-feed-entry__type-icon"
           style={{
             fontSize: 12,
             opacity: 0.7,
@@ -127,24 +127,24 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
           {typeIcon}
         </span>
         <span 
-          className="lcars-feed-entry__timestamp"
+          className="occ-feed-entry__timestamp"
           style={{
             fontSize: 11,
-            color: 'var(--lcars-text-dim)',
-            fontFamily: 'var(--lcars-font-mono)',
+            color: 'var(--occ-text-dim)',
+            fontFamily: 'var(--occ-font-mono)',
           }}
         >
           {timeAgo}
         </span>
       </div>
       
-      <div className="lcars-feed-entry__content" style={{ marginTop: 6, marginLeft: 0 }}>
+      <div className="occ-feed-entry__content" style={{ marginTop: 6, marginLeft: 0 }}>
         {entry.task && entry.type !== 'spawn' && entry.type !== 'complete' && (
           <div 
-            className="lcars-feed-entry__task"
+            className="occ-feed-entry__task"
             style={{
               fontSize: 10,
-              color: 'var(--lcars-text-dim)',
+              color: 'var(--occ-text-dim)',
               marginBottom: 4,
               fontStyle: 'italic',
               opacity: 0.8,
@@ -155,7 +155,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         )}
         
         <div 
-          className="lcars-feed-entry__main-content"
+          className="occ-feed-entry__main-content"
           style={{
             fontSize: 13,
             lineHeight: 1.4,
@@ -167,15 +167,15 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         {/* Tool invocation details */}
         {entry.toolInvocation && entry.type === 'tool' && (
           <div 
-            className="lcars-feed-entry__details"
+            className="occ-feed-entry__details"
             style={{
               marginTop: 6,
               padding: '4px 8px',
               background: 'rgba(0,0,0,0.2)',
               borderRadius: 4,
               fontSize: 10,
-              fontFamily: 'var(--lcars-font-mono)',
-              color: 'var(--lcars-text-dim)',
+              fontFamily: 'var(--occ-font-mono)',
+              color: 'var(--occ-text-dim)',
             }}
           >
             {entry.toolInvocation.params?.file_path && (
@@ -193,7 +193,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         {/* Progress indicator for running tasks */}
         {entry.status === 'running' && (
           <div 
-            className="lcars-feed-entry__progress"
+            className="occ-feed-entry__progress"
             style={{
               marginTop: 6,
               display: 'flex',
@@ -227,7 +227,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         {/* Status indicator */}
         {entry.status === 'error' && (
           <div 
-            className="lcars-feed-entry__error"
+            className="occ-feed-entry__error"
             style={{
               marginTop: 6,
               fontSize: 10,
@@ -255,7 +255,7 @@ function ActiveTasksPanel() {
   
   return (
     <div 
-      className="lcars-active-tasks"
+      className="occ-active-tasks"
       style={{
         marginBottom: 16,
         padding: 12,
@@ -265,7 +265,7 @@ function ActiveTasksPanel() {
       }}
     >
       <div 
-        className="lcars-active-tasks__header"
+        className="occ-active-tasks__header"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -319,16 +319,16 @@ function EmptyState({ connected }: { connected: boolean }) {
   if (!connected) {
     return (
       <div style={{
-        color: 'var(--lcars-text-dim)',
+        color: 'var(--occ-text-dim)',
         fontSize: 14,
         padding: '60px 20px',
         textAlign: 'center',
-        border: '2px dashed var(--lcars-border)',
+        border: '2px dashed var(--occ-border)',
         borderRadius: 12,
       }}>
         <div style={{ fontSize: 32, marginBottom: 16 }}>🔌</div>
         <div>Connecting to gateway...</div>
-        <div style={{ fontSize: 12, color: 'var(--lcars-text-dim)', marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--occ-text-dim)', marginTop: 8 }}>
           ws://127.0.0.1:18789
         </div>
       </div>
@@ -337,19 +337,19 @@ function EmptyState({ connected }: { connected: boolean }) {
   
   return (
     <div style={{
-      color: 'var(--lcars-text-dim)',
+      color: 'var(--occ-text-dim)',
       fontSize: 14,
       padding: '60px 20px',
       textAlign: 'center',
     }}>
       <div style={{ fontSize: 32, marginBottom: 16 }}>📡</div>
       <div>Gateway connected</div>
-      <div style={{ fontSize: 12, color: 'var(--lcars-text-dim)', marginTop: 8 }}>
+      <div style={{ fontSize: 12, color: 'var(--occ-text-dim)', marginTop: 8 }}>
         Waiting for crew activity...
       </div>
       <div style={{ 
         fontSize: 11, 
-        color: 'var(--lcars-text-dim)', 
+        color: 'var(--occ-text-dim)', 
         marginTop: 16,
         opacity: 0.7,
       }}>
@@ -417,7 +417,7 @@ export default function ActivityFeed() {
       
       {/* Section Header */}
       <div 
-        className="lcars-section-header lcars-section-header--purple" 
+        className="occ-section-header occ-section-header--purple" 
         style={{ 
           marginBottom: 12,
           display: 'flex',
@@ -426,13 +426,13 @@ export default function ActivityFeed() {
         }}
       >
         <div>
-          <span className="lcars-section-header__number">47-25</span>
+          <span className="occ-section-header__number">47-25</span>
           <span style={{ marginLeft: 8 }}>SHIP'S LOG</span>
         </div>
         <span 
           style={{ 
             fontSize: 11, 
-            color: 'var(--lcars-text-dim)',
+            color: 'var(--occ-text-dim)',
             fontWeight: 'normal',
           }}
         >
@@ -444,7 +444,7 @@ export default function ActivityFeed() {
       {!hasContent ? (
         <EmptyState connected={connected} />
       ) : (
-        <div className="lcars-feed-container">
+        <div className="occ-feed-container">
           {groupedFeed.map((entry) => (
             <ActivityItem 
               key={entry.id} 
@@ -459,7 +459,7 @@ export default function ActivityFeed() {
               style={{
                 textAlign: 'center',
                 fontSize: 10,
-                color: 'var(--lcars-text-dim)',
+                color: 'var(--occ-text-dim)',
                 padding: '8px 0',
                 opacity: 0.7,
               }}
@@ -472,21 +472,21 @@ export default function ActivityFeed() {
 
       {/* System Messages Section - Only show when empty or at bottom */}
       {filteredFeed.length === 0 && (
-        <div className="lcars-section-header lcars-section-header--cyan" style={{ marginTop: 16, marginBottom: 12 }}>
-          <span className="lcars-section-header__number">47-26</span>
+        <div className="occ-section-header occ-section-header--cyan" style={{ marginTop: 16, marginBottom: 12 }}>
+          <span className="occ-section-header__number">47-26</span>
           <span style={{ marginLeft: 8 }}>SYSTEM</span>
         </div>
       )}
 
       {filteredFeed.length === 0 && (
-        <div className="lcars-feed-entry">
-          <div className="lcars-feed-entry__header">
-            <span className="lcars-feed-entry__timestamp">SYS</span>
-            <span className="lcars-feed-entry__crew">🔧</span>
-            <span className="lcars-feed-entry__number">47-27</span>
+        <div className="occ-feed-entry">
+          <div className="occ-feed-entry__header">
+            <span className="occ-feed-entry__timestamp">SYS</span>
+            <span className="occ-feed-entry__crew">🔧</span>
+            <span className="occ-feed-entry__number">47-27</span>
           </div>
-          <div className="lcars-feed-entry__content">
-            LCARS Interface v47.1 - Online
+          <div className="occ-feed-entry__content">
+            OCC Interface v47.1 - Online
           </div>
         </div>
       )}

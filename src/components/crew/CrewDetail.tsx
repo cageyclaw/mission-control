@@ -18,7 +18,7 @@ export default function CrewDetail() {
   const primarySession = crewSessions[0];
 
   return (
-    <div className={`lcars-slide-panel ${selectedCrewId ? 'lcars-slide-panel--open' : ''}`}>
+    <div className={`occ-slide-panel ${selectedCrewId ? 'occ-slide-panel--open' : ''}`}>
       {/* Header */}
       <div style={{ 
         display: 'flex', 
@@ -26,7 +26,7 @@ export default function CrewDetail() {
         alignItems: 'center', 
         marginBottom: 20,
         paddingBottom: 12,
-        borderBottom: '2px solid var(--lcars-orange)'
+        borderBottom: '2px solid var(--occ-orange)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 32 }}>{member.emoji}</span>
@@ -37,20 +37,20 @@ export default function CrewDetail() {
               fontWeight: 700, 
               textTransform: 'uppercase',
               letterSpacing: 2,
-              color: 'var(--lcars-orange)'
+              color: 'var(--occ-orange)'
             }}>
               {member.name}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--lcars-text-muted)' }}>{member.role}</div>
+            <div style={{ fontSize: 12, color: 'var(--occ-text-muted)' }}>{member.role}</div>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontFamily: 'Antonio', fontSize: 11, color: 'var(--lcars-text-dim)' }}>
+          <div style={{ fontFamily: 'Antonio', fontSize: 11, color: 'var(--occ-text-dim)' }}>
             REF: 47-1{selectedCrewId.toUpperCase().charAt(0)}
           </div>
           <button
             onClick={() => selectCrew(null)}
-            className="lcars-action-button lcars-action-button--orange"
+            className="occ-action-button occ-action-button--orange"
             style={{ height: 32, width: 80, fontSize: 11, marginTop: 4 }}
           >
             CLOSE
@@ -59,11 +59,11 @@ export default function CrewDetail() {
       </div>
 
       {/* Status Panel */}
-      <div className="lcars-panel lcars-panel--orange" style={{ marginBottom: 12 }}>
+      <div className="occ-panel occ-panel--orange" style={{ marginBottom: 12 }}>
         <div style={{ 
           fontSize: 11, 
           fontFamily: 'Antonio', 
-          color: 'var(--lcars-orange)', 
+          color: 'var(--occ-orange)', 
           marginBottom: 8,
           letterSpacing: 2
         }}>
@@ -81,7 +81,7 @@ export default function CrewDetail() {
           </span>
         </div>
         {member.model && (
-          <div style={{ fontSize: 12, color: 'var(--lcars-text-muted)' }}>
+          <div style={{ fontSize: 12, color: 'var(--occ-text-muted)' }}>
             MODEL: {member.model.split('/').pop()?.toUpperCase()}
           </div>
         )}
@@ -89,11 +89,11 @@ export default function CrewDetail() {
 
       {/* Current Session Panel */}
       {primarySession && (
-        <div className="lcars-panel lcars-panel--cyan" style={{ marginBottom: 12 }}>
+        <div className="occ-panel occ-panel--cyan" style={{ marginBottom: 12 }}>
           <div style={{ 
             fontSize: 11, 
             fontFamily: 'Antonio', 
-            color: 'var(--lcars-cyan)', 
+            color: 'var(--occ-cyan)', 
             marginBottom: 8,
             letterSpacing: 2
           }}>
@@ -101,7 +101,7 @@ export default function CrewDetail() {
           </div>
           <div style={{ 
             fontSize: 12, 
-            color: 'var(--lcars-text-muted)', 
+            color: 'var(--occ-text-muted)', 
             fontFamily: 'JetBrains Mono',
             marginBottom: 4 
           }}>
@@ -109,14 +109,14 @@ export default function CrewDetail() {
           </div>
           <div style={{ 
             fontSize: 12, 
-            color: 'var(--lcars-text-muted)',
+            color: 'var(--occ-text-muted)',
             marginBottom: 4
           }}>
             MODEL: {primarySession.model.split('/').pop()?.toUpperCase()}
           </div>
           <div style={{ 
             fontSize: 11, 
-            color: 'var(--lcars-text-dim)', 
+            color: 'var(--occ-text-dim)', 
             marginTop: 8,
             display: 'flex',
             gap: 12
@@ -131,7 +131,7 @@ export default function CrewDetail() {
               display: 'flex', 
               justifyContent: 'space-between', 
               fontSize: 11, 
-              color: 'var(--lcars-text-muted)',
+              color: 'var(--occ-text-muted)',
               marginBottom: 4
             }}>
               <span>CONTEXT USAGE</span>
@@ -139,7 +139,7 @@ export default function CrewDetail() {
             </div>
             <div style={{ 
               height: 8, 
-              background: 'var(--lcars-border)', 
+              background: 'var(--occ-border)', 
               borderRadius: 4,
               overflow: 'hidden'
             }}>
@@ -148,12 +148,12 @@ export default function CrewDetail() {
                   height: '100%',
                   width: `${primarySession.percentUsed}%`,
                   background: primarySession.percentUsed > 80 
-                    ? 'var(--lcars-red)' 
+                    ? 'var(--occ-red)' 
                     : primarySession.percentUsed > 50 
-                      ? 'var(--lcars-orange)' 
+                      ? 'var(--occ-orange)' 
                       : primarySession.percentUsed > 25 
-                        ? 'var(--lcars-yellow)' 
-                        : 'var(--lcars-green)',
+                        ? 'var(--occ-yellow)' 
+                        : 'var(--occ-green)',
                   borderRadius: 4,
                   transition: 'width 300ms ease'
                 }}
@@ -165,11 +165,11 @@ export default function CrewDetail() {
 
       {/* All Sessions Panel */}
       {crewSessions.length > 1 && (
-        <div className="lcars-panel" style={{ marginBottom: 12 }}>
+        <div className="occ-panel" style={{ marginBottom: 12 }}>
           <div style={{ 
             fontSize: 11, 
             fontFamily: 'Antonio', 
-            color: 'var(--lcars-text-muted)', 
+            color: 'var(--occ-text-muted)', 
             marginBottom: 8,
             letterSpacing: 2
           }}>
@@ -178,7 +178,7 @@ export default function CrewDetail() {
           {crewSessions.map((s, index) => (
             <div key={s.key} style={{ 
               padding: '8px 0', 
-              borderBottom: index < crewSessions.length - 1 ? '1px solid var(--lcars-border)' : 'none'
+              borderBottom: index < crewSessions.length - 1 ? '1px solid var(--occ-border)' : 'none'
             }}>
               <div style={{ 
                 fontSize: 12, 
@@ -189,7 +189,7 @@ export default function CrewDetail() {
               </div>
               <div style={{ 
                 fontSize: 11, 
-                color: 'var(--lcars-text-dim)',
+                color: 'var(--occ-text-dim)',
                 display: 'flex',
                 gap: 12
               }}>
@@ -203,11 +203,11 @@ export default function CrewDetail() {
 
       {/* No Data State */}
       {!primarySession && member.status === 'offline' && (
-        <div className="lcars-panel" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 13, color: 'var(--lcars-text-dim)' }}>
+        <div className="occ-panel" style={{ textAlign: 'center', padding: 24 }}>
+          <div style={{ fontSize: 13, color: 'var(--occ-text-dim)' }}>
             No active sessions
           </div>
-          <div style={{ fontSize: 11, color: 'var(--lcars-text-muted)', marginTop: 4 }}>
+          <div style={{ fontSize: 11, color: 'var(--occ-text-muted)', marginTop: 4 }}>
             {member.name} is currently offline
           </div>
         </div>

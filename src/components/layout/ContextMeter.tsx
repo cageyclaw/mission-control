@@ -24,11 +24,11 @@ export default function ContextMeter({
   const displayColor = useMemo(() => {
     switch (alertLevel) {
       case 'red':
-        return 'var(--lcars-red)';
+        return 'var(--occ-red)';
       case 'amber':
-        return 'var(--lcars-yellow)';
+        return 'var(--occ-yellow)';
       default:
-        return 'var(--lcars-green)';
+        return 'var(--occ-green)';
     }
   }, [alertLevel]);
 

@@ -21,46 +21,46 @@ export default function CostView() {
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {/* Sessions Card */}
-        <div className="lcars-panel lcars-panel--orange">
-          <div className="lcars-status-row" style={{ borderBottom: 'none', padding: 0 }}>
-            <span className="lcars-status-row__number">47-40</span>
-            <span className="lcars-status-row__label">Sessions</span>
+        <div className="occ-panel occ-panel--orange">
+          <div className="occ-status-row" style={{ borderBottom: 'none', padding: 0 }}>
+            <span className="occ-status-row__number">47-40</span>
+            <span className="occ-status-row__label">Sessions</span>
           </div>
-          <div className="lcars-data--large" style={{ marginTop: 8, color: 'var(--lcars-orange)' }}>
+          <div className="occ-data--large" style={{ marginTop: 8, color: 'var(--occ-orange)' }}>
             {sessions.length}
           </div>
-          <div className="lcars-data--label">Active</div>
+          <div className="occ-data--label">Active</div>
         </div>
 
         {/* Total Tokens Card */}
-        <div className="lcars-panel lcars-panel--purple">
-          <div className="lcars-status-row" style={{ borderBottom: 'none', padding: 0 }}>
-            <span className="lcars-status-row__number">47-41</span>
-            <span className="lcars-status-row__label">Tokens</span>
+        <div className="occ-panel occ-panel--purple">
+          <div className="occ-status-row" style={{ borderBottom: 'none', padding: 0 }}>
+            <span className="occ-status-row__number">47-41</span>
+            <span className="occ-status-row__label">Tokens</span>
           </div>
-          <div className="lcars-data--large" style={{ marginTop: 8, color: 'var(--lcars-purple)' }}>
+          <div className="occ-data--large" style={{ marginTop: 8, color: 'var(--occ-purple)' }}>
             {formatTokens(sessions.reduce((sum, s) => sum + s.totalTokens, 0))}
           </div>
-          <div className="lcars-data--label">Total</div>
+          <div className="occ-data--label">Total</div>
         </div>
 
         {/* Models Card */}
-        <div className="lcars-panel lcars-panel--cyan">
-          <div className="lcars-status-row" style={{ borderBottom: 'none', padding: 0 }}>
-            <span className="lcars-status-row__number">47-42</span>
-            <span className="lcars-status-row__label">Models</span>
+        <div className="occ-panel occ-panel--cyan">
+          <div className="occ-status-row" style={{ borderBottom: 'none', padding: 0 }}>
+            <span className="occ-status-row__number">47-42</span>
+            <span className="occ-status-row__label">Models</span>
           </div>
-          <div className="lcars-data--large" style={{ marginTop: 8, color: 'var(--lcars-cyan)' }}>
+          <div className="occ-data--large" style={{ marginTop: 8, color: 'var(--occ-cyan)' }}>
             {chartData.length}
           </div>
-          <div className="lcars-data--label">Unique</div>
+          <div className="occ-data--label">Unique</div>
         </div>
       </div>
 
       {/* Token Usage Chart */}
-      <div className="lcars-panel" style={{ marginBottom: 24 }}>
-        <div className="lcars-section-header lcars-section-header--orange" style={{ marginBottom: 16 }}>
-          <span className="lcars-section-header__number">47-43</span>
+      <div className="occ-panel" style={{ marginBottom: 24 }}>
+        <div className="occ-section-header occ-section-header--orange" style={{ marginBottom: 16 }}>
+          <span className="occ-section-header__number">47-43</span>
           <span style={{ marginLeft: 8 }}>Token Usage By Model</span>
         </div>
 
@@ -105,9 +105,9 @@ export default function CostView() {
       </div>
 
       {/* Per-Session Breakdown */}
-      <div className="lcars-panel">
-        <div className="lcars-section-header lcars-section-header--purple" style={{ marginBottom: 12 }}>
-          <span className="lcars-section-header__number">47-44</span>
+      <div className="occ-panel">
+        <div className="occ-section-header occ-section-header--purple" style={{ marginBottom: 12 }}>
+          <span className="occ-section-header__number">47-44</span>
           <span style={{ marginLeft: 8 }}>Per Session Breakdown</span>
         </div>
 
@@ -115,24 +115,24 @@ export default function CostView() {
           sessions.map((session, index) => (
             <div
               key={session.key}
-              className="lcars-status-row"
+              className="occ-status-row"
               style={{ 
-                borderBottom: index < sessions.length - 1 ? '1px solid var(--lcars-border)' : 'none'
+                borderBottom: index < sessions.length - 1 ? '1px solid var(--occ-border)' : 'none'
               }}
             >
-              <span className="lcars-status-row__number">
+              <span className="occ-status-row__number">
                 47-{45 + index}
               </span>
-              <span className="lcars-status-row__label" style={{ fontSize: 12 }}>
+              <span className="occ-status-row__label" style={{ fontSize: 12 }}>
                 {session.key.split(':').pop()?.toUpperCase()}
               </span>
-              <span className="lcars-status-row__value" style={{ fontSize: 11 }}>
+              <span className="occ-status-row__value" style={{ fontSize: 11 }}>
                 {session.percentUsed}% CTX
               </span>
               <span style={{ 
                 fontFamily: 'JetBrains Mono', 
                 fontSize: 12, 
-                color: 'var(--lcars-text)',
+                color: 'var(--occ-text)',
                 marginRight: 8
               }}>
                 {formatTokens(session.totalTokens)}

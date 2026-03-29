@@ -13,6 +13,7 @@ import type {
   StatusData,
 } from '../api/types';
 import { CREW_MEMBERS, detectCrew, registerSubagentWithDualIds, cleanupCompletedSubagents, type SubagentMapping } from '../utils/crew';
+import { resolveMetricsUrl } from '../config';
 
 interface GatewayStore {
   // Connection
@@ -82,7 +83,7 @@ interface GatewayStore {
   updateStatus: (status: StatusData) => void;
   addFeedEntry: (entry: FeedEntry) => void;
   updateFeedEntry: (id: string, updates: Partial<FeedEntry>) => void;
-  registerSubagent: (sessionKey: string, crewId: string, task?: string) => void;
+  registerSubagent: (sessionKey: string, crewId: string, task?: string, sessionAge?: number, spawnTimestamp?: number) => void;
   updateSubagentStatus: (sessionKey: string, status: SubagentMapping['status']) => void;
   updateActiveTask: (crewId: string, entry: FeedEntry) => void;
   clearFeed: () => void;
@@ -92,6 +93,107 @@ interface GatewayStore {
 
   // System Metrics
   fetchSystemMetrics: () => Promise<void>;
+}
+
+interface CrewRuntimeStatus {
+  status: CrewMember['status'];
+  model?: string;
+  contextPercent?: number;
+  currentTask?: string;
+  updatedAt: number;
+}
+
+const ACTIVE_WINDOW_MS = 120000;
+const IDLE_WINDOW_MS = 600000;
+
+function getSessionUpdatedAt(session: Session): number {
+  if (typeof session.updatedAt === 'number' && Number.isFinite(session.updatedAt) && session.updatedAt > 0) {
+    return session.updatedAt;
+  }
+
+  const age = typeof session.age === 'number' && Number.isFinite(session.age) ? session.age : 0;
+  return Date.now() - Math.max(age, 0);
+}
+
+function inferCrewStatusFromSession(session: Session, spawnedStatus?: SubagentMapping['status']): CrewMember['status'] {
+  const explicitStatus = [
+    (session as Session & { status?: string }).status,
+    (session as Session & { state?: string }).state,
+    session.kind,
+    ...(Array.isArray(session.flags) ? session.flags : []),
+    spawnedStatus,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (explicitStatus.includes('error') || explicitStatus.includes('failed') || explicitStatus.includes('crash')) {
+    return 'error';
+  }
+
+  if (
+    explicitStatus.includes('completed') ||
+    explicitStatus.includes('complete') ||
+    explicitStatus.includes('success') ||
+    explicitStatus.includes('finished') ||
+    explicitStatus.includes('done') ||
+    explicitStatus.includes('timeout')
+  ) {
+    return 'idle';
+  }
+
+  if (
+    explicitStatus.includes('active') ||
+    explicitStatus.includes('running') ||
+    explicitStatus.includes('streaming') ||
+    explicitStatus.includes('processing') ||
+    explicitStatus.includes('spawning')
+  ) {
+    return 'active';
+  }
+
+  if (explicitStatus.includes('idle') || explicitStatus.includes('waiting')) {
+    return 'idle';
+  }
+
+  const age = typeof session.age === 'number' && Number.isFinite(session.age) ? session.age : Infinity;
+  if (age < ACTIVE_WINDOW_MS) return 'active';
+  if (age < IDLE_WINDOW_MS) return 'idle';
+  return 'offline';
+}
+
+function getAuthoritativeQSession(qSessions: Session[]): Session | undefined {
+  if (qSessions.length === 0) return undefined;
+
+  // DEBUG: Log all Q sessions for troubleshooting
+  console.log('[DEBUG] getAuthoritativeQSession called with', qSessions.length, 'sessions:');
+  qSessions.forEach((s, i) => {
+    console.log(`  [${i}] key: ${s.key}, model: ${s.model}, tokens: ${s.totalTokens}, age: ${s.age}`);
+  });
+
+  // Find telegram sessions and pick the one with highest token count (most active)
+  const telegramSessions = qSessions.filter(s => s.key.startsWith('agent:main:telegram:'));
+  if (telegramSessions.length > 0) {
+    // Sort by token count descending (most active = most tokens used)
+    const sortedByTokens = telegramSessions.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+    console.log('[DEBUG] Selected telegram session by token count:', sortedByTokens[0].key, 'model:', sortedByTokens[0].model);
+    return sortedByTokens[0];
+  }
+
+  // Fallback: find any main session with highest token count
+  const mainScoped = qSessions.filter(s => s.key.startsWith('agent:main:') && !s.key.includes('subagent'));
+  if (mainScoped.length > 0) {
+    const sortedByTokens = mainScoped.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+    console.log('[DEBUG] Selected main session by token count:', sortedByTokens[0].key, 'model:', sortedByTokens[0].model);
+    return sortedByTokens[0];
+  }
+
+  // Last resort: most recently updated
+  const latest = qSessions.reduce((latest, current) =>
+    getSessionUpdatedAt(current) > getSessionUpdatedAt(latest) ? current : latest
+  );
+  console.log('[DEBUG] Fallback to latest updated session:', latest.key, 'model:', latest.model);
+  return latest;
 }
 
 export const useGatewayStore = create<GatewayStore>((set, get) => ({
@@ -124,12 +226,13 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
 
   updateReady: (ready) => set({ gatewayReady: ready }),
 
-  registerSubagent: (sessionKey, crewId, task) => {
+  registerSubagent: (sessionKey, crewId, task, sessionAge, spawnTimestamp) => {
     const sessionId = sessionKey.split(':').pop() || sessionKey;
+    const resolvedSpawnTimestamp = spawnTimestamp ?? (Date.now() - (sessionAge || 0));
     const mapping: SubagentMapping = {
       sessionId,
       crewId,
-      spawnedAt: Date.now(),
+      spawnedAt: resolvedSpawnTimestamp,
       task,
       status: 'spawning',
     };
@@ -142,7 +245,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     if (crew) {
       get().addFeedEntry({
         id: crypto.randomUUID(),
-        timestamp: Date.now(),
+        timestamp: resolvedSpawnTimestamp,
         crewId,
         crewEmoji: crew.emoji,
         content: task ? `Spawned: ${task.substring(0, 80)}${task.length > 80 ? '...' : ''}` : 'Spawned',
@@ -213,10 +316,14 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
             crewId = 'unknown';
           }
 
+          const sessionAge = session.age || 0;
+          const spawnTimestamp = Date.now() - sessionAge;
+          get().registerSubagent(session.key, crewId, task, sessionAge, spawnTimestamp);
+
           const mapping: SubagentMapping = {
             sessionId,
             crewId,
-            spawnedAt: Date.now() - (session.age || 0),
+            spawnedAt: spawnTimestamp,
             task,
             status: 'active',
           };
@@ -231,106 +338,84 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       }
     });
 
-    // Build crew status with PROPER session matching
-    const crewStatusMap = new Map<string, { 
-      status: CrewMember['status']; 
-      model?: string;
-      contextPercent?: number;
-      currentTask?: string;
-    }>();
+    // Build crew status with deterministic session matching
+    const crewStatusMap = new Map<string, CrewRuntimeStatus>();
 
-    // First: Handle Q (main session) separately
-    // Prioritize agent:main:main or webchat sessions, ignore Telegram sessions for Q
-    const qSession = sessions
-      .filter(s => s.agentId === 'main' && !s.key.includes('subagent'))
-      .sort((a, b) => {
-        // Prefer agent:main:main or webchat sessions
-        const aIsPreferred = a.key === 'agent:main:main' || a.key.includes('webchat');
-        const bIsPreferred = b.key === 'agent:main:main' || b.key.includes('webchat');
-        if (aIsPreferred && !bIsPreferred) return -1;
-        if (!aIsPreferred && bIsPreferred) return 1;
-        // Then prefer most recent (lowest age)
-        return (a.age || Infinity) - (b.age || Infinity);
-      })[0];
+    // First: Handle Q using the authoritative main Q session for model/context display
+    const qSessions = sessions.filter(s => s.agentId === 'main' && !s.key.includes('subagent'));
+    
+    // DEBUG: Log all filtered Q sessions
+    console.log('[DEBUG] updateStatus: Found', qSessions.length, 'Q sessions (agentId=main, not subagent):');
+    qSessions.forEach((s, i) => {
+      console.log(`  [${i}] key: ${s.key}, model: ${s.model}, totalTokens: ${s.totalTokens}, age: ${s.age}`);
+    });
+    
+    const qModelSession = getAuthoritativeQSession(qSessions);
 
-    if (qSession) {
-      const age = qSession.age || 0;
-      let qStatus: CrewMember['status'] = 'offline';
-      if (age < 120000) { // 2 minutes = active
-        qStatus = 'active';
-      } else if (age < 600000) { // 10 minutes = idle
-        qStatus = 'idle';
-      }
-
+    if (qModelSession) {
       crewStatusMap.set('q', {
-        status: qStatus,
-        model: qSession.model,
-        contextPercent: qSession.percentUsed ?? undefined,
+        status: inferCrewStatusFromSession(qModelSession),
+        model: qModelSession.model,
+        contextPercent: qModelSession.percentUsed ?? undefined,
         currentTask: undefined,
+        updatedAt: getSessionUpdatedAt(qModelSession),
       });
     }
 
-    // Second: Handle subagents using their SPECIFIC sessions
+    // Second: Handle subagents using their specific mapped sessions and newest data wins
     sessions.forEach(session => {
       if (!session.key.includes('subagent')) return;
-      
+
       const keyUuid = session.key.split(':').pop();
       const sessionId = session.sessionId;
-      
-      // Look up this SPECIFIC session in the registry
-      const mapping = keyUuid ? newMappings.get(keyUuid) : undefined;
+
+      // Look up this specific session in the registry (supports both UUID forms)
+      const mappingByKey = keyUuid ? newMappings.get(keyUuid) : undefined;
       const mappingBySessionId = newMappings.get(sessionId);
-      const actualMapping = mapping || mappingBySessionId;
-      
+      const actualMapping = mappingByKey || mappingBySessionId;
+
       if (!actualMapping) return;
-      
-      // Determine status based on session age
-      const age = session.age || 0;
-      let crewStatus: CrewMember['status'] = 'offline';
-      
-      if (age < 120000) { // 2 minutes = active
-        crewStatus = 'active';
-      } else if (age < 600000) { // 10 minutes = idle
-        crewStatus = 'idle';
+
+      const updatedAt = getSessionUpdatedAt(session);
+      const crewStatus: CrewMember['status'] = inferCrewStatusFromSession(session, actualMapping.status);
+      const existingStatus = crewStatusMap.get(actualMapping.crewId);
+
+      // Keep the newest session snapshot for each crew member to avoid stale model/status overwrites
+      if (existingStatus && existingStatus.updatedAt > updatedAt) {
+        return;
       }
 
-      // Check if this is a newly spawned subagent
-      if (actualMapping.status === 'spawning') {
-        crewStatus = 'active';
-      }
-
-      // Only set status for the crew this session ACTUALLY belongs to
       crewStatusMap.set(actualMapping.crewId, {
         status: crewStatus,
-        model: session.model,
-        contextPercent: session.percentUsed ?? undefined,
-        currentTask: actualMapping.task,
+        model: session.model || existingStatus?.model,
+        contextPercent: session.percentUsed ?? existingStatus?.contextPercent,
+        currentTask: actualMapping.task ?? existingStatus?.currentTask,
+        updatedAt,
       });
     });
 
     const activeCrew = CREW_MEMBERS.map(c => {
       const crewStatus = crewStatusMap.get(c.id);
       const currentMember = currentActiveCrew.find(m => m.id === c.id);
-      
-      // Determine if this is a fresh session or we're preserving last known
-      const isCurrentlyActive = crewStatus?.status && crewStatus.status !== 'offline';
-      
+
+      const isOnline = crewStatus ? crewStatus.status !== 'offline' : false;
+
       return {
         ...c,
         status: crewStatus?.status ?? 'offline',
-        model: crewStatus?.model ?? currentMember?.model,
-        contextPercent: crewStatus?.contextPercent ?? currentMember?.contextPercent,
-        currentTask: crewStatus?.currentTask ?? currentMember?.currentTask,
-        
-        // Preserve last known values when going offline
-        lastKnownModel: isCurrentlyActive 
-          ? undefined 
-          : (crewStatus?.model ?? currentMember?.lastKnownModel ?? currentMember?.model),
-        lastKnownContextPercent: isCurrentlyActive 
-          ? undefined 
-          : (crewStatus?.contextPercent ?? currentMember?.lastKnownContextPercent ?? currentMember?.contextPercent),
-        lastSeen: isCurrentlyActive 
-          ? Date.now() 
+        model: crewStatus?.model,
+        contextPercent: crewStatus?.contextPercent,
+        currentTask: crewStatus?.currentTask,
+
+        // Preserve last known values when session disappears/offlines (for crash monitoring)
+        lastKnownModel: isOnline
+          ? undefined
+          : (currentMember?.model ?? currentMember?.lastKnownModel),
+        lastKnownContextPercent: isOnline
+          ? undefined
+          : (currentMember?.contextPercent ?? currentMember?.lastKnownContextPercent),
+        lastSeen: isOnline
+          ? Date.now()
           : (currentMember?.lastSeen ?? Date.now()),
       };
     });
@@ -342,11 +427,11 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       memory: status.memory ?? null,
       security: status.securityAudit ?? null,
       channels: status.channelSummary ?? [],
-      qContextData: qSession ? {
-        contextPercent: qSession.percentUsed,
-        tokensUsed: qSession.totalTokens,
-        tokensTotal: qSession.totalTokens + (qSession.remainingTokens || 0),
-        tokensRemaining: qSession.remainingTokens || 0,
+      qContextData: qModelSession ? {
+        contextPercent: qModelSession.percentUsed ?? 0,
+        tokensUsed: qModelSession.totalTokens ?? 0,
+        tokensTotal: (qModelSession.totalTokens ?? 0) + (qModelSession.remainingTokens || 0),
+        tokensRemaining: qModelSession.remainingTokens ?? 0,
       } : null,
     });
   },
@@ -406,7 +491,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   // Fetch system metrics from standalone server
   fetchSystemMetrics: async () => {
     try {
-      const response = await fetch('/metrics/api/system/metrics');
+      const response = await fetch(await resolveMetricsUrl('/api/system/metrics'));
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }

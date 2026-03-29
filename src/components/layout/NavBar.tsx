@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useGatewayStore } from '../../stores/gateway';
 import ContextMeter from './ContextMeter';
+import SettingsDialog from './SettingsDialog';
 import type { View } from '../../api/types';
 
 interface NavItem {
@@ -19,31 +21,33 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function NavBar() {
   const { activeView, setActiveView, qContextData } = useGatewayStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <nav className="lcars-bottom-bar">
+    <>
+    <nav className="occ-bottom-bar">
       {/* Left elbow */}
-      <div className="lcars-elbow lcars-elbow--bottom-left lcars-elbow--orange">
-        <span className="lcars-elbow__label">47-90</span>
+      <div className="occ-elbow occ-elbow--bottom-left occ-elbow--orange">
+        <span className="occ-elbow__label">47-90</span>
       </div>
       
       {/* Mode buttons */}
-      <div className="lcars-bottom-bar__left">
+      <div className="occ-bottom-bar__left">
         {NAV_ITEMS.map(item => (
           <button
             key={item.id}
-            className={`lcars-mode-button lcars-mode-button--${item.color} ${activeView === item.id ? 'lcars-mode-button--active' : ''}`}
+            className={`occ-mode-button occ-mode-button--${item.color} ${activeView === item.id ? 'occ-mode-button--active' : ''}`}
             onClick={() => setActiveView(item.id)}
           >
-            <span className="lcars-mode-button__number">{item.number}</span>
-            <span className="lcars-mode-button__label">{item.label}</span>
-            {item.sublabel && <span className="lcars-mode-button__label">{item.sublabel}</span>}
+            <span className="occ-mode-button__number">{item.number}</span>
+            <span className="occ-mode-button__label">{item.label}</span>
+            {item.sublabel && <span className="occ-mode-button__label">{item.sublabel}</span>}
           </button>
         ))}
       </div>
       
       {/* Context Meter */}
-      <div className="lcars-bottom-bar__middle">
+      <div className="occ-bottom-bar__middle">
         {qContextData && (
           <ContextMeter
             contextPercent={qContextData.contextPercent}
@@ -52,25 +56,46 @@ export default function NavBar() {
             referenceNumber="47-95"
           />
         )}
-        <div className="lcars-bottom-bar__spacer-flex" />
+        <div className="occ-bottom-bar__spacer-flex" />
       </div>
 
       {/* Action buttons */}
-      <div className="lcars-bottom-bar__right">
-        <button className="lcars-action-button lcars-action-button--red">
-          <span className="lcars-action-button__number">47-99</span>
+      <div className="occ-bottom-bar__right">
+        <button className="occ-action-button occ-action-button--red" onClick={async () => {
+          if (confirm('🔴 RED ALERT 🔴\n\nThis will:\n1. End all active sessions\n2. Write session memory to daily log\n3. Restart the OpenClaw gateway\n\nContinue?')) {
+            try {
+              // 1. End all sessions
+              await fetch('/api/session/end', { method: 'POST' });
+              // 2. Write memory
+              await fetch('/api/memory/flush', { method: 'POST' });
+              // 3. Restart gateway
+              await fetch('/api/gateway/restart', { method: 'POST' });
+              alert('✅ RED ALERT executed!\nSessions ended, gateway restarting...');
+            } catch (err) {
+              console.error('RED ALERT failed:', err);
+              alert('❌ RED ALERT failed. Check console.');
+            }
+          }
+        }}>
+          <span className="occ-action-button__number">47-99</span>
           <span>ALERT</span>
         </button>
-        <button className="lcars-action-button lcars-action-button--orange" onClick={() => window.location.reload()}>
-          <span className="lcars-action-button__number">47-A0</span>
+        <button className="occ-action-button occ-action-button--orange" onClick={() => setSettingsOpen(true)}>
+          <span className="occ-action-button__number">47-A0</span>
+          <span>SETTINGS</span>
+        </button>
+        <button className="occ-action-button occ-action-button--orange" onClick={() => window.location.reload()}>
+          <span className="occ-action-button__number">47-A1</span>
           <span>REFRESH</span>
         </button>
       </div>
       
       {/* Right elbow */}
-      <div className="lcars-elbow lcars-elbow--bottom-right lcars-elbow--orange">
-        <span className="lcars-elbow__label">47-A1</span>
+      <div className="occ-elbow occ-elbow--bottom-right occ-elbow--orange">
+        <span className="occ-elbow__label">47-A2</span>
       </div>
     </nav>
+    <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+    </>
   );
 }

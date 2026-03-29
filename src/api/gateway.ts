@@ -3,9 +3,9 @@
 import { useGatewayStore } from '../stores/gateway';
 import type { FeedEntry, StatusData } from './types';
 import { inferCrewFromTask } from '../utils/crew';
+import { resolveGatewayWsUrl } from '../config';
 
 // Gateway connection config
-const GATEWAY_URL = 'ws://127.0.0.1:18789';
 const GATEWAY_TOKEN = 'ZOv3tXtMhz6rfzNgg_vfIH21qWdOi9PdytyHnASDwOA';
 
 let ws: WebSocket | null = null;
@@ -15,12 +15,13 @@ let pendingRequests = new Map<string, { resolve: (v: any) => void; reject: (e: a
 
 let connectId: string | null = null;
 
-export function connectGateway() {
+export async function connectGateway() {
   const store = useGatewayStore.getState();
 
   if (ws?.readyState === WebSocket.OPEN) return;
 
-  ws = new WebSocket(GATEWAY_URL);
+  const gatewayUrl = await resolveGatewayWsUrl();
+  ws = new WebSocket(gatewayUrl);
 
   ws.addEventListener('open', () => {
     console.log('[MC] WebSocket open, marking as connected and waiting for challenge...');

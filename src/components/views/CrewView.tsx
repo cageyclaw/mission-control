@@ -3,7 +3,7 @@ import { useGatewayStore } from '../../stores/gateway';
 import { getDisplayValues } from '../../utils/crew';
 import CrewCard from '../crew/CrewCard';
 
-const LCARS_ORANGE = '#FF9900';
+const OCC_ORANGE = '#FF9900';
 
 export default function CrewView() {
   const { activeCrew } = useGatewayStore();
@@ -48,7 +48,7 @@ export default function CrewView() {
           style={{
             fontSize: '14px',
             fontWeight: 700,
-            color: LCARS_ORANGE,
+            color: OCC_ORANGE,
             marginRight: '12px',
             fontFamily: '"Antonio", sans-serif'
           }}
@@ -61,7 +61,7 @@ export default function CrewView() {
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '2px',
-            color: LCARS_ORANGE
+            color: OCC_ORANGE
           }}
         >
           Crew Context Monitor

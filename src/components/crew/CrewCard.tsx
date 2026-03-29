@@ -7,12 +7,12 @@ interface CrewCardProps {
   crewMember: CrewMember;
 }
 
-const LCARS_ORANGE = '#FF9900';
-const LCARS_PURPLE = '#CC88CC';
-const LCARS_GREEN = '#66CC99';
-const LCARS_YELLOW = '#FFCC66';
-const LCARS_RED = '#FF6666';
-const LCARS_GRAY = '#888888';
+const OCC_ORANGE = '#FF9900';
+const OCC_PURPLE = '#CC88CC';
+const OCC_GREEN = '#66CC99';
+const OCC_YELLOW = '#FFCC66';
+const OCC_RED = '#FF6666';
+const OCC_GRAY = '#888888';
 
 export default function CrewCard({ crewMember }: CrewCardProps) {
   const { displayModel, displayContextPercent, displayStatus } = getDisplayValues(crewMember);
@@ -21,13 +21,13 @@ export default function CrewCard({ crewMember }: CrewCardProps) {
   // Determine risk color for the left border
   let riskColor: string;
   if (isOffline) {
-    riskColor = LCARS_GRAY;
+    riskColor = OCC_GRAY;
   } else if (displayContextPercent > 85) {
-    riskColor = LCARS_RED;
+    riskColor = OCC_RED;
   } else if (displayContextPercent >= 70) {
-    riskColor = LCARS_YELLOW;
+    riskColor = OCC_YELLOW;
   } else {
-    riskColor = LCARS_GREEN;
+    riskColor = OCC_GREEN;
   }
 
   // Format model name
@@ -81,7 +81,7 @@ export default function CrewCard({ crewMember }: CrewCardProps) {
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '1px',
-              color: LCARS_ORANGE
+              color: OCC_ORANGE
             }}
           >
             {crewMember.name}
@@ -90,7 +90,7 @@ export default function CrewCard({ crewMember }: CrewCardProps) {
           <div
             style={{
               fontSize: '12px',
-              color: LCARS_PURPLE,
+              color: OCC_PURPLE,
               fontFamily: '"JetBrains Mono", monospace'
             }}
           >

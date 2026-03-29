@@ -5,21 +5,21 @@ interface ContextBarProps {
   isOffline?: boolean;
 }
 
-const LCARS_GREEN = '#66CC99';
-const LCARS_YELLOW = '#FFCC66';
-const LCARS_RED = '#FF6666';
+const OCC_GREEN = '#66CC99';
+const OCC_YELLOW = '#FFCC66';
+const OCC_RED = '#FF6666';
 
 export default function ContextBar({ contextPercent, isOffline = false }: ContextBarProps) {
   // Determine risk color
   let riskColor: string;
   if (isOffline) {
-    riskColor = LCARS_YELLOW;
+    riskColor = OCC_YELLOW;
   } else if (contextPercent > 85) {
-    riskColor = LCARS_RED;
+    riskColor = OCC_RED;
   } else if (contextPercent >= 70) {
-    riskColor = LCARS_YELLOW;
+    riskColor = OCC_YELLOW;
   } else {
-    riskColor = LCARS_GREEN;
+    riskColor = OCC_GREEN;
   }
 
   // Format percentage display

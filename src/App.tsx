@@ -27,78 +27,78 @@ function App() {
   }, []);
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lcars-bg)' }}>
-      {/* LCARS Header with Elbows */}
-      <header className="lcars-header-container">
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--occ-bg)' }}>
+      {/* OCC Header with Elbows */}
+      <header className="occ-header-container">
         {/* Left Elbow with reference number */}
-        <div className="lcars-elbow lcars-elbow--top-left lcars-elbow--orange">
-          <span className="lcars-elbow__label">47-11</span>
+        <div className="occ-elbow occ-elbow--top-left occ-elbow--orange">
+          <span className="occ-elbow__label">47-11</span>
         </div>
         
         {/* Header Bar */}
-        <div className="lcars-header">
+        <div className="occ-header">
           {/* Left segment */}
-          <div className="lcars-header-bar lcars-header-bar--left" />
+          <div className="occ-header-bar occ-header-bar--left" />
           
           {/* Center - Title */}
-          <div className="lcars-header-bar lcars-header-bar--center">
-            <div className="lcars-header__title">Mission Control</div>
+          <div className="occ-header-bar occ-header-bar--center">
+            <div className="occ-header__title">Command Center</div>
           </div>
           
           {/* Right segment with status */}
-          <div className="lcars-header-bar lcars-header-bar--right">
-            <div className="lcars-header__status-block">
+          <div className="occ-header-bar occ-header-bar--right">
+            <div className="occ-header__status-block">
               <div className={`status-dot ${connected ? 'status-dot--active' : 'status-dot--error'}`} />
-              <span className={`lcars-header__status-text ${connected ? 'lcars-header__status-text--online' : 'lcars-header__status-text--offline'}`}>
-                {connected ? 'CONTINUUM' : 'DISRUPTED'}
+              <span className={`occ-header__status-text ${connected ? 'occ-header__status-text--online' : 'occ-header__status-text--offline'}`}>
+                {connected ? 'CONNECTED' : 'DISRUPTED'}
               </span>
             </div>
-            <div className="lcars-stardate">
+            <div className="occ-stardate">
               {stardate()}
             </div>
           </div>
         </div>
         
         {/* Right Elbow with reference number */}
-        <div className="lcars-elbow lcars-elbow--top-right lcars-elbow--orange">
-          <span className="lcars-elbow__label">47-12</span>
+        <div className="occ-elbow occ-elbow--top-right occ-elbow--orange">
+          <span className="occ-elbow__label">47-12</span>
         </div>
       </header>
 
       {/* Main Content Container */}
-      <div className="lcars-main-container">
+      <div className="occ-main-container">
         {activeView === 'home' && (
           <>
             {/* Left Sidebar - Crew Roster */}
-            <aside className="lcars-sidebar-left">
-              <div className="lcars-sidebar-left__header">
-                <span className="lcars-sidebar-left__header-number">47-15</span>
+            <aside className="occ-sidebar-left">
+              <div className="occ-sidebar-left__header">
+                <span className="occ-sidebar-left__header-number">47-15</span>
                 Crew Roster
               </div>
-              <div className="lcars-sidebar-left__content">
+              <div className="occ-sidebar-left__content">
                 <CrewRoster />
               </div>
             </aside>
 
             {/* Center Panel - Activity Feed */}
-            <main className="lcars-center-panel">
-              <div className="lcars-center-panel__header">
-                <span className="lcars-center-panel__header-number-left">47-21</span>
+            <main className="occ-center-panel">
+              <div className="occ-center-panel__header">
+                <span className="occ-center-panel__header-number-left">47-21</span>
                 Activity Feed
-                <span className="lcars-center-panel__header-number-right">47-22</span>
+                <span className="occ-center-panel__header-number-right">47-22</span>
               </div>
-              <div className="lcars-center-panel__content">
+              <div className="occ-center-panel__content">
                 <ActivityFeed />
               </div>
             </main>
 
             {/* Right Sidebar - Ship Status */}
-            <aside className="lcars-sidebar-right">
-              <div className="lcars-sidebar-right__header">
+            <aside className="occ-sidebar-right">
+              <div className="occ-sidebar-right__header">
                 Ship Status
-                <span className="lcars-sidebar-right__header-number">47-30</span>
+                <span className="occ-sidebar-right__header-number">47-30</span>
               </div>
-              <div className="lcars-sidebar-right__content" style={{ position: 'relative' }}>
+              <div className="occ-sidebar-right__content" style={{ position: 'relative' }}>
                 <ShipStatus />
                 <CostPanel />
                 <CrewDetail />
@@ -108,39 +108,39 @@ function App() {
         )}
         
         {activeView === 'cost' && (
-          <main className="lcars-center-panel" style={{ width: '100%' }}>
-            <div className="lcars-center-panel__header">
-              <span className="lcars-center-panel__header-number-left">47-40</span>
+          <main className="occ-center-panel" style={{ width: '100%' }}>
+            <div className="occ-center-panel__header">
+              <span className="occ-center-panel__header-number-left">47-40</span>
               Cost Analysis
-              <span className="lcars-center-panel__header-number-right">47-41</span>
+              <span className="occ-center-panel__header-number-right">47-41</span>
             </div>
-            <div className="lcars-center-panel__content">
+            <div className="occ-center-panel__content">
               <CostView />
             </div>
           </main>
         )}
         
         {activeView === 'system' && (
-          <main className="lcars-center-panel" style={{ width: '100%' }}>
-            <div className="lcars-center-panel__header">
-              <span className="lcars-center-panel__header-number-left">47-50</span>
+          <main className="occ-center-panel" style={{ width: '100%' }}>
+            <div className="occ-center-panel__header">
+              <span className="occ-center-panel__header-number-left">47-50</span>
               System Diagnostics
-              <span className="lcars-center-panel__header-number-right">47-51</span>
+              <span className="occ-center-panel__header-number-right">47-51</span>
             </div>
-            <div className="lcars-center-panel__content">
+            <div className="occ-center-panel__content">
               <SystemView />
             </div>
           </main>
         )}
         
         {activeView === 'crew' && (
-          <main className="lcars-center-panel" style={{ width: '100%' }}>
-            <div className="lcars-center-panel__header">
-              <span className="lcars-center-panel__header-number-left">47-60</span>
+          <main className="occ-center-panel" style={{ width: '100%' }}>
+            <div className="occ-center-panel__header">
+              <span className="occ-center-panel__header-number-left">47-60</span>
               Crew Context Monitor
-              <span className="lcars-center-panel__header-number-right">47-61</span>
+              <span className="occ-center-panel__header-number-right">47-61</span>
             </div>
-            <div className="lcars-center-panel__content">
+            <div className="occ-center-panel__content">
               <CrewView />
             </div>
           </main>

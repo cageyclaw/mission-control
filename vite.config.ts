@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5180,
     host: '0.0.0.0',
-    allowedHosts: ['lcars.cageycloud.com', 'localhost', '127.0.0.1'],
+    allowedHosts: ['lcars.cageycloud.com', 'occ.cageycloud.com', 'localhost', '127.0.0.1'],
     proxy: {
       // Proxy gateway health endpoints
       '/healthz': {

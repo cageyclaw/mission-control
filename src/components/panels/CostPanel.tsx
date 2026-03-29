@@ -24,33 +24,33 @@ export default function CostPanel() {
   const maxTokens = topModels.length > 0 ? topModels[0][1] : 1;
 
   return (
-    <div style={{ marginTop: 16, borderTop: '2px solid var(--lcars-border)', paddingTop: 16 }}>
+    <div style={{ marginTop: 16, borderTop: '2px solid var(--occ-border)', paddingTop: 16 }}>
       {/* Section Header */}
-      <div className="lcars-section-header lcars-section-header--purple" style={{ marginBottom: 12 }}>
-        <span className="lcars-section-header__number">47-36</span>
+      <div className="occ-section-header occ-section-header--purple" style={{ marginBottom: 12 }}>
+        <span className="occ-section-header__number">47-36</span>
         <span style={{ marginLeft: 8 }}>TOKEN USAGE</span>
       </div>
 
       {/* Totals */}
-      <div className="lcars-status-row" style={{ borderBottom: '1px solid var(--lcars-border)' }}>
-        <span className="lcars-status-row__number">47-37</span>
-        <span className="lcars-status-row__label">Total Tokens</span>
-        <span className="lcars-status-row__value" style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 600 }}>
+      <div className="occ-status-row" style={{ borderBottom: '1px solid var(--occ-border)' }}>
+        <span className="occ-status-row__number">47-37</span>
+        <span className="occ-status-row__label">Total Tokens</span>
+        <span className="occ-status-row__value" style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 600 }}>
           {formatTokens(totalTokens)}
         </span>
       </div>
 
-      <div className="lcars-status-row" style={{ borderBottom: '1px solid var(--lcars-border)' }}>
-        <span className="lcars-status-row__number">47-38</span>
-        <span className="lcars-status-row__label">Active Sessions</span>
-        <span className="lcars-status-row__value" style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 600 }}>
+      <div className="occ-status-row" style={{ borderBottom: '1px solid var(--occ-border)' }}>
+        <span className="occ-status-row__number">47-38</span>
+        <span className="occ-status-row__label">Active Sessions</span>
+        <span className="occ-status-row__value" style={{ fontFamily: 'JetBrains Mono', fontSize: 14, fontWeight: 600 }}>
           {sessions.length}
         </span>
       </div>
 
       {/* Breakdown */}
-      <div style={{ padding: '12px 0', borderBottom: '1px solid var(--lcars-border)' }}>
-        <div className="lcars-data" style={{ fontSize: 11, color: 'var(--lcars-text-muted)' }}>
+      <div style={{ padding: '12px 0', borderBottom: '1px solid var(--occ-border)' }}>
+        <div className="occ-data" style={{ fontSize: 11, color: 'var(--occ-text-muted)' }}>
           IN: {formatTokens(totalInput)} · OUT: {formatTokens(totalOutput)} · CACHE: {formatTokens(totalCache)}
         </div>
       </div>
@@ -58,8 +58,8 @@ export default function CostPanel() {
       {/* Per-model progress bars */}
       {topModels.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div className="lcars-section-header lcars-section-header--cyan" style={{ marginBottom: 8 }}>
-            <span className="lcars-section-header__number">47-3A</span>
+          <div className="occ-section-header occ-section-header--cyan" style={{ marginBottom: 8 }}>
+            <span className="occ-section-header__number">47-3A</span>
             <span style={{ marginLeft: 8 }}>BY MODEL</span>
           </div>
 
@@ -69,22 +69,22 @@ export default function CostPanel() {
             const color = colors[index % colors.length];
             
             return (
-              <div key={model} className="lcars-progress-bar">
-                <div className="lcars-progress-bar__header">
-                  <span className="lcars-progress-bar__label">{model}</span>
-                  <span className="lcars-progress-bar__number">{`47-${(59 + index).toString(36).toUpperCase()}`}</span>
+              <div key={model} className="occ-progress-bar">
+                <div className="occ-progress-bar__header">
+                  <span className="occ-progress-bar__label">{model}</span>
+                  <span className="occ-progress-bar__number">{`47-${(59 + index).toString(36).toUpperCase()}`}</span>
                 </div>
-                <div className="lcars-progress-bar__track">
+                <div className="occ-progress-bar__track">
                   <div
-                    className={`lcars-progress-bar__fill lcars-progress-bar__fill--${color}`}
+                    className={`occ-progress-bar__fill occ-progress-bar__fill--${color}`}
                     style={{ width: `${(tokens / maxTokens) * 100}%` }}
                   />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-                  <span style={{ fontSize: 10, color: 'var(--lcars-text-muted)' }}>
+                  <span style={{ fontSize: 10, color: 'var(--occ-text-muted)' }}>
                     {formatTokens(tokens)}
                   </span>
-                  <span style={{ fontSize: 10, color: 'var(--lcars-text-dim)' }}>
+                  <span style={{ fontSize: 10, color: 'var(--occ-text-dim)' }}>
                     {percentage}%
                   </span>
                 </div>

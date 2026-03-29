@@ -1,4 +1,4 @@
-// Circular Gauge Component for LCARS Dashboard
+// Circular Gauge Component for OCC Dashboard
 // Displays percentage as a filled arc with color coding
 
 interface GaugeProps {
@@ -8,20 +8,20 @@ interface GaugeProps {
   unit?: string;
 }
 
-const LCARS_ORANGE = '#FF9900';
-const LCARS_GREEN = '#66CC99';
-const LCARS_YELLOW = '#FFCC66';
-const LCARS_RED = '#FF6666';
+const OCC_ORANGE = '#FF9900';
+const OCC_GREEN = '#66CC99';
+const OCC_YELLOW = '#FFCC66';
+const OCC_RED = '#FF6666';
 
 export default function Gauge({ value, label, refNumber, unit = '%' }: GaugeProps) {
   // Determine color based on value
   let color: string;
   if (value < 60) {
-    color = LCARS_GREEN;
+    color = OCC_GREEN;
   } else if (value < 80) {
-    color = LCARS_YELLOW;
+    color = OCC_YELLOW;
   } else {
-    color = LCARS_RED;
+    color = OCC_RED;
   }
 
   // Calculate arc
@@ -112,7 +112,7 @@ export default function Gauge({ value, label, refNumber, unit = '%' }: GaugeProp
         fontSize: '12px',
         textTransform: 'uppercase',
         letterSpacing: '1px',
-        color: LCARS_ORANGE,
+        color: OCC_ORANGE,
         fontFamily: '"Antonio", sans-serif'
       }}>
         {label}
