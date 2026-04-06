@@ -1,5 +1,5 @@
 {
-  "name": "mission-control",
+  "name": "occ-desktop",
   "private": true,
   "version": "0.1.0",
   "description": "OpenClaw Command Center desktop operator console",
@@ -19,7 +19,7 @@
     "preview:vite": "vite preview",
     "electron": "electron .",
     "dist:mac": "npm run build && electron-builder --mac dmg",
-    "dist:linux": "npm run build && electron-builder --linux AppImage deb rpm",
+    "dist:linux": "npm run build && electron-builder --linux deb",
     "dist": "npm run build && electron-builder -mwl"
   },
   "dependencies": {
@@ -48,8 +48,8 @@
     "vitest": "^3.2.4"
   },
   "build": {
-    "appId": "com.cageycloud.missioncontrol",
-    "productName": "Mission Control",
+    "appId": "com.cageycloud.occ",
+    "productName": "OpenClaw Command Center",
     "directories": {
       "output": "release"
     },
@@ -81,14 +81,22 @@
     },
     "linux": {
       "target": [
-        "AppImage",
-        "deb",
-        "rpm"
+        "deb"
       ],
-      "category": "Utility",
+      "executableName": "occ",
+      "category": "System;Utility",
       "icon": "build/icons",
-      "afterInstall": "scripts/deb-postinstall.sh",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "desktop": {
+        "entry": {
+          "Name": "OCC",
+          "Icon": "occ",
+          "Categories": "System;Utility;",
+          "StartupWMClass": "occ"
+        }
+      }
+    },
+    "deb": {
+      "afterInstall": "scripts/deb-postinstall.sh"
     }
   }
 }
