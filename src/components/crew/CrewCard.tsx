@@ -13,22 +13,18 @@ const OCC_GREEN = '#66CC99';
 const OCC_YELLOW = '#FFCC66';
 const OCC_RED = '#FF6666';
 const OCC_GRAY = '#888888';
+const OCC_BLUE = '#2EB8FF';
 
 export default function CrewCard({ crewMember }: CrewCardProps) {
   const { displayModel, displayContextPercent, displayStatus } = getDisplayValues(crewMember);
-  const isOffline = displayStatus === 'offline' || displayStatus === 'error';
+  const isOffline = displayStatus === 'offline';
 
-  // Determine risk color for the left border
-  let riskColor: string;
-  if (isOffline) {
-    riskColor = OCC_GRAY;
-  } else if (displayContextPercent > 85) {
-    riskColor = OCC_RED;
-  } else if (displayContextPercent >= 70) {
-    riskColor = OCC_YELLOW;
-  } else {
-    riskColor = OCC_GREEN;
-  }
+  let statusColor = OCC_GRAY;
+  if (displayStatus === 'active') statusColor = OCC_GREEN;
+  if (displayStatus === 'idle' || displayStatus === 'timed-out') statusColor = OCC_YELLOW;
+  if (displayStatus === 'error' || displayStatus === 'stopped') statusColor = OCC_RED;
+  if (displayStatus === 'completed') statusColor = OCC_BLUE;
+  if (displayStatus === 'offline') statusColor = OCC_GRAY;
 
   // Format model name
   const formattedModel = displayModel
@@ -43,6 +39,15 @@ export default function CrewCard({ crewMember }: CrewCardProps) {
       break;
     case 'idle':
       statusText = '[IDLE]';
+      break;
+    case 'completed':
+      statusText = '[COMPLETED]';
+      break;
+    case 'timed-out':
+      statusText = '[TIMED OUT]';
+      break;
+    case 'stopped':
+      statusText = '[STOPPED]';
       break;
     case 'error':
       statusText = '[ERROR]';
@@ -61,7 +66,7 @@ export default function CrewCard({ crewMember }: CrewCardProps) {
     <div
       style={{
         background: 'rgba(0, 0, 0, 0.8)',
-        borderLeft: `8px solid ${riskColor}`,
+        borderLeft: `8px solid ${statusColor}`,
         borderRadius: '0 8px 8px 0',
         padding: '16px 20px',
         position: 'relative',
@@ -95,14 +100,20 @@ export default function CrewCard({ crewMember }: CrewCardProps) {
             }}
           >
             {formattedModel}
+            {crewMember.fallbackActive ? ` • FALLBACK${crewMember.fallbackCount ? ` x${crewMember.fallbackCount}` : ''}` : ''}
           </div>
+          {crewMember.requestedModel && crewMember.requestedModel !== crewMember.model && (
+            <div style={{ fontSize: '10px', color: '#999999', fontFamily: '"JetBrains Mono", monospace' }}>
+              REQUESTED: {crewMember.requestedModel.split('/').pop()?.toUpperCase() ?? crewMember.requestedModel.toUpperCase()}
+            </div>
+          )}
         </div>
 
         <div
           style={{
             fontSize: '11px',
             textTransform: 'uppercase',
-            color: isOffline ? '#666666' : '#888888'
+            color: statusColor
           }}
         >
           {statusText}

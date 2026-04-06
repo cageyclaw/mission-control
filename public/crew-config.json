@@ -1,0 +1,77 @@
+{
+  "version": "1.0",
+  "spawnBehavior": "explicitRegistration",
+  "fallbackBehavior": {
+    "retryDefault": 2,
+    "fallbackDelayMs": 5000,
+    "notifyOnFallback": true
+  },
+  "crew": [
+    {
+      "id": "q",
+      "name": "Q",
+      "emoji": "🧠",
+      "role": "Commander",
+      "description": "Main session commander and architect",
+      "isMainSession": true
+    },
+    {
+      "id": "data",
+      "name": "Data",
+      "emoji": "🔍",
+      "role": "Research",
+      "description": "Deep research and analysis tasks",
+      "defaultModel": "ollama/nemotron-3-super:cloud",
+      "fallbackModels": []
+    },
+    {
+      "id": "geordi",
+      "name": "Geordi",
+      "emoji": "🔧",
+      "role": "Code",
+      "description": "Primary code implementation and engineering",
+      "defaultModel": "openai-codex/gpt-5.3-codex",
+      "fallbackModels": [
+        "ollama/qwen3-coder-next:cloud"
+      ]
+    },
+    {
+      "id": "spark",
+      "name": "Spark",
+      "emoji": "⚡",
+      "role": "Quick Code",
+      "description": "Rapid code tasks and quick fixes",
+      "defaultModel": "openai-codex/gpt-5.3-codex-spark",
+      "fallbackModels": []
+    },
+    {
+      "id": "riker",
+      "name": "Riker",
+      "emoji": "🎯",
+      "role": "QA/Review",
+      "description": "Quality assurance, planning, and code review",
+      "defaultModel": "openai-codex/gpt-5.4",
+      "fallbackModels": [
+        "ollama/glm-5:cloud"
+      ]
+    },
+    {
+      "id": "troi",
+      "name": "Troi",
+      "emoji": "💝",
+      "role": "Marketing",
+      "description": "Marketing, social media, and content writing",
+      "defaultModel": "openai-codex/gpt-5.2",
+      "fallbackModels": []
+    },
+    {
+      "id": "barclay",
+      "name": "Barclay",
+      "emoji": "🎨",
+      "role": "Art/UX",
+      "description": "Art generation, UX design, and image tasks",
+      "defaultModel": "openai-codex/gpt-5.2",
+      "fallbackModels": []
+    }
+  ]
+}

@@ -17,9 +17,9 @@ export default function CostView() {
   const chartData = Object.values(modelData).sort((a, b) => b.tokens - a.tokens);
 
   return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
+    <div style={{ height: '100%', overflow: 'auto', minWidth: 0 }}>
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         {/* Sessions Card */}
         <div className="occ-panel occ-panel--orange">
           <div className="occ-status-row" style={{ borderBottom: 'none', padding: 0 }}>
@@ -137,7 +137,7 @@ export default function CostView() {
               }}>
                 {formatTokens(session.totalTokens)}
               </span>
-              <span className={`status-dot ${session.age < 300000 ? 'status-dot--active' : 'status-dot--idle'}`} />
+              <span className={`status-dot ${(session.age ?? Infinity) < 300000 ? 'status-dot--active' : 'status-dot--idle'}`} />
             </div>
           ))
         ) : (

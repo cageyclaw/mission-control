@@ -16,8 +16,17 @@ export interface Session {
   key: string;
   kind: string;
   sessionId: string;
+  label?: string;
+  displayName?: string;
+  parentSessionKey?: string;
+  spawnedBy?: string;
+  subagentRole?: string;
+  status?: 'running' | 'done' | 'failed' | 'killed' | 'timeout' | string;
+  startedAt?: number;
+  endedAt?: number;
+  runtimeMs?: number;
   updatedAt: number;
-  age: number;
+  age?: number;
   inputTokens: number;
   outputTokens: number;
   cacheRead: number;
@@ -105,8 +114,11 @@ export interface CrewMember {
   name: string;
   emoji: string;
   role: string;
-  status: 'active' | 'idle' | 'offline' | 'error';
+  status: 'active' | 'idle' | 'completed' | 'timed-out' | 'stopped' | 'offline' | 'error';
   model?: string;
+  requestedModel?: string;
+  fallbackActive?: boolean;
+  fallbackCount?: number;
   currentTask?: string;
   tokens?: number;
   contextPercent?: number;
@@ -130,7 +142,7 @@ export type FeedEntryType =
 
 export interface ToolInvocation {
   tool: string;           // Tool name: exec, read, write, web_search, etc.
-  params?: Record<string, any>;  // Tool parameters (sanitized)
+  params?: Record<string, unknown>;  // Tool parameters (sanitized)
   summary?: string;       // Human-readable summary
 }
 
@@ -179,7 +191,7 @@ export interface FeedFilter {
   timeRange?: '1h' | '24h' | '7d' | 'all';
 }
 
-export type View = 'home' | 'crew' | 'cost' | 'system';
+export type View = 'home' | 'crew' | 'system' | 'chat';
 
 export interface CostSnapshot {
   date: string;
@@ -194,3 +206,46 @@ export interface QContextData {
   tokensTotal: number;
   tokensRemaining: number;
 }
+
+export type ChatConnectionStatus = 'idle' | 'connecting' | 'connected' | 'degraded' | 'disconnected' | 'error';
+export type ChatSessionStatus = 'unknown' | 'available' | 'missing';
+
+export interface ChatSessionResponse {
+  ok?: boolean;
+  sessionKey?: string | null;
+  error?: string;
+}
+
+export interface ChatSessionResult {
+  ok: boolean;
+  sessionKey: string | null;
+}
+
+export type ChatMessageStatus = 'streaming' | 'complete' | 'interrupted' | 'error';
+
+export interface ChatMessage {
+  id: string;
+  role: 'assistant' | 'user' | 'system';
+  text: string;
+  status?: ChatMessageStatus;
+  createdAt: number;
+}
+
+export type ChatToolRunStatus = 'running' | 'success' | 'error';
+
+export interface ChatToolRun {
+  id: string;
+  runId?: string;
+  toolName?: string;
+  status: ChatToolRunStatus;
+  input?: unknown;
+  output?: unknown;
+  error?: string;
+  startedAt: number;
+  finishedAt?: number;
+}
+
+export type ChatProxyEvent = {
+  type: string;
+  [key: string]: unknown;
+};

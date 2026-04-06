@@ -1,0 +1,52 @@
+flowchart LR
+    subgraph Browser["Browser / OPP UI"]
+        UI["OPP React Dashboard\n(Session, Context, Chat, Status)"]
+    end
+
+    subgraph Dev["Frontend Dev Layer"]
+        Vite["Vite Dev Server\n:5180\nServes UI + forwards local routes"]
+    end
+
+    subgraph Bridge["OPP Backend Bridge"]
+        ProxyHTTP["proxy-server.mjs HTTP\n:5181\n/api/status\n/api/chat/session\n/api/subagents"]
+        ProxyWS["proxy-server.mjs WebSocket\n:5182\n/ws live event bridge"]
+    end
+
+    subgraph Metrics["System Metrics"]
+        MetricsServer["system-metrics-server\n:18790\nCPU / Memory / Disk"]
+    end
+
+    subgraph OpenClaw["OpenClaw Runtime"]
+        Gateway["OpenClaw Gateway\n:18789\nSource of truth"]
+        Sessions["Sessions + Context\nActive sessions\nModels\nToken/context usage"]
+        Chat["Chat + Tool Events\nStreaming responses\nTool activity"]
+        Runtime["Runtime Status\nHealth\nSubagents\nSystem state"]
+    end
+
+    UI -->|Load app| Vite
+    UI -->|GET /api/status\nGET /api/chat/session\nGET /api/subagents| Vite
+    UI -->|WS /ws| Vite
+    UI -->|GET /metrics| Vite
+
+    Vite -->|Forwards /api| ProxyHTTP
+    Vite -->|Forwards /ws| ProxyWS
+    Vite -->|Forwards /metrics| MetricsServer
+
+    ProxyHTTP -->|Status + session lookup| Gateway
+    ProxyWS -->|Operator websocket connect\nchat.send\nstream events| Gateway
+
+    Gateway --> Sessions
+    Gateway --> Chat
+    Gateway --> Runtime
+
+    classDef ui fill:#2b1f3a,stroke:#c58cff,stroke-width:2px,color:#fff;
+    classDef dev fill:#2e3f4f,stroke:#87d7ff,stroke-width:2px,color:#fff;
+    classDef bridge fill:#4a3212,stroke:#ffb347,stroke-width:2px,color:#fff;
+    classDef gateway fill:#3a2b12,stroke:#ffd166,stroke-width:2px,color:#fff;
+    classDef metrics fill:#1f3a2b,stroke:#7bd88f,stroke-width:2px,color:#fff;
+
+    class UI ui;
+    class Vite dev;
+    class ProxyHTTP,ProxyWS bridge;
+    class Gateway,Sessions,Chat,Runtime gateway;
+    class MetricsServer metrics;

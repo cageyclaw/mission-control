@@ -34,11 +34,23 @@ export default function SettingsDialog({ open, onClose }: Props) {
           <option value="wss">wss</option>
         </select>
 
-        <label>Proxy Base URL</label>
-        <input value={form.proxyBaseUrl} onChange={e => setForm({ ...form, proxyBaseUrl: e.target.value })} style={inputStyle} />
-
         <label>Metrics Base URL</label>
         <input value={form.metricsBaseUrl} onChange={e => setForm({ ...form, metricsBaseUrl: e.target.value })} style={inputStyle} />
+
+        <label>Gateway Token</label>
+        <input
+          type="password"
+          value={form.gatewayToken ?? ''}
+          onChange={e => setForm({ ...form, gatewayToken: e.target.value })}
+          style={inputStyle}
+          placeholder="Operator token used for gateway connect"
+          autoComplete="off"
+          spellCheck={false}
+        />
+
+        <div style={{ fontSize: 12, color: 'var(--occ-text-muted)', marginTop: -2, marginBottom: 10 }}>
+          Save settings, then use REFRESH if the renderer needs to reconnect with updated gateway credentials.
+        </div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="occ-action-button occ-action-button--orange" onClick={onClose}><span>CLOSE</span></button>

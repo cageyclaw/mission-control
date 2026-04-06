@@ -1,6 +1,25 @@
-import { useGatewayStore } from '../../stores/gateway';
+/**
+ * Activity Feed Component — Phase 5 Implementation
+ *
+ * The activity feed is now a READ-ONLY VIEW of computed feed entries
+ * from the activityFeedStore. It no longer drives session inference
+ * or contains synthetic event generation.
+ *
+ * Feed entries are derived from:
+ *   - sessionsStore: session lifecycle events
+ *   - chatStore: chat messages
+ *   - toolStore: tool activity runs
+ */
+
+import {
+  useFilteredFeedEntries,
+  useActiveTasks,
+  useActivityFeedStore,
+  type ComputedFeedEntry,
+} from '../../stores/activityFeedStore';
+import { useSessionsStore } from '../../stores/sessionsStore';
 import { formatTimeAgo } from '../../utils/crew';
-import type { FeedEntry, FeedEntryType } from '../../api/types';
+import type { FeedEntryType } from '../../api/types';
 
 // Type icons mapping
 const TYPE_ICONS: Record<FeedEntryType, string> = {
@@ -16,41 +35,47 @@ const TYPE_ICONS: Record<FeedEntryType, string> = {
   system: '🔧',
 };
 
-// Type colors for visual distinction
+// Type colors for visual distinction (LCARS palette)
 const TYPE_COLORS: Record<FeedEntryType, string> = {
-  spawn: '#22c55e',     // green
-  complete: '#10b981',  // emerald
-  tool: '#f59e0b',      // amber
-  file: '#3b82f6',      // blue
-  process: '#8b5cf6',   // violet
-  search: '#06b6d4',    // cyan
-  message: '#6b7280',   // gray
-  cron: '#a855f7',      // purple
-  error: '#ef4444',     // red
-  system: '#6366f1',    // indigo
+  spawn: '#22c55e', // green
+  complete: '#10b981', // emerald
+  tool: '#f59e0b', // amber
+  file: '#3b82f6', // blue
+  process: '#8b5cf6', // violet
+  search: '#06b6d4', // cyan
+  message: '#6b7280', // gray
+  cron: '#a855f7', // purple
+  error: '#ef4444', // red
+  system: '#6366f1', // indigo
 };
 
 // Get activity verb based on type
-function getActivityVerb(type: FeedEntryType, entry: FeedEntry): string {
+function getActivityVerb(type: FeedEntryType, entry: ComputedFeedEntry): string {
   switch (type) {
     case 'spawn':
       return 'spawned';
     case 'complete':
       return entry.status === 'error' ? 'failed' : 'completed';
     case 'tool':
-      return entry.toolInvocation?.tool === 'web_search' ? 'searched' :
-             entry.toolInvocation?.tool === 'web_fetch' ? 'fetched' :
-             entry.toolInvocation?.tool === 'image' ? 'analyzed' :
-             `invoked ${entry.toolInvocation?.tool || 'tool'}`;
+      return entry.toolInvocation?.tool === 'web_search'
+        ? 'searched'
+        : entry.toolInvocation?.tool === 'web_fetch'
+          ? 'fetched'
+          : entry.toolInvocation?.tool === 'image'
+            ? 'analyzed'
+            : `invoked ${entry.toolInvocation?.tool || 'tool'}`;
     case 'file':
-      return entry.fileOperation?.operation === 'read' ? 'read' :
-             entry.fileOperation?.operation === 'write' ? 'wrote' : 'edited';
+      return entry.fileOperation?.operation === 'read'
+        ? 'read'
+        : entry.fileOperation?.operation === 'write'
+          ? 'wrote'
+          : 'edited';
     case 'process':
       return 'executed';
     case 'search':
       return 'searched';
     case 'message':
-      return 'said';
+      return entry.crewId === 'user' ? 'said' : 'replied';
     case 'cron':
       return 'ran';
     case 'error':
@@ -63,7 +88,7 @@ function getActivityVerb(type: FeedEntryType, entry: FeedEntry): string {
 }
 
 interface ActivityItemProps {
-  entry: FeedEntry;
+  entry: ComputedFeedEntry;
   isActive: boolean;
 }
 
@@ -72,10 +97,10 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
   const typeColor = TYPE_COLORS[entry.type];
   const verb = getActivityVerb(entry.type, entry);
   const timeAgo = formatTimeAgo(entry.timestamp);
-  
+
   // Determine the crew name and emoji
   const crewName = entry.crewId.charAt(0).toUpperCase() + entry.crewId.slice(1);
-  
+
   return (
     <div
       className={`occ-feed-entry ${isActive ? 'occ-feed-entry--active' : ''}`}
@@ -84,17 +109,20 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         opacity: isActive ? 1 : 0.7,
       }}
     >
-      <div className="occ-feed-entry__header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span 
-          className="occ-feed-entry__crew" 
-          style={{ 
+      <div
+        className="occ-feed-entry__header"
+        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+      >
+        <span
+          className="occ-feed-entry__crew"
+          style={{
             fontSize: 18,
             filter: isActive ? 'none' : 'grayscale(30%)',
           }}
         >
           {entry.crewEmoji}
         </span>
-        <span 
+        <span
           className="occ-feed-entry__crew-name"
           style={{
             fontSize: 12,
@@ -106,7 +134,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         >
           {crewName}
         </span>
-        <span 
+        <span
           className="occ-feed-entry__verb"
           style={{
             fontSize: 11,
@@ -117,7 +145,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
           {verb}
         </span>
         <span style={{ flex: 1 }} />
-        <span 
+        <span
           className="occ-feed-entry__type-icon"
           style={{
             fontSize: 12,
@@ -126,7 +154,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         >
           {typeIcon}
         </span>
-        <span 
+        <span
           className="occ-feed-entry__timestamp"
           style={{
             fontSize: 11,
@@ -137,10 +165,10 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
           {timeAgo}
         </span>
       </div>
-      
+
       <div className="occ-feed-entry__content" style={{ marginTop: 6, marginLeft: 0 }}>
         {entry.task && entry.type !== 'spawn' && entry.type !== 'complete' && (
-          <div 
+          <div
             className="occ-feed-entry__task"
             style={{
               fontSize: 10,
@@ -150,11 +178,12 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
               opacity: 0.8,
             }}
           >
-            Task: {entry.task.substring(0, 80)}{entry.task.length > 80 ? '...' : ''}
+            Task: {entry.task.substring(0, 80)}
+            {entry.task.length > 80 ? '...' : ''}
           </div>
         )}
-        
-        <div 
+
+        <div
           className="occ-feed-entry__main-content"
           style={{
             fontSize: 13,
@@ -163,10 +192,10 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
         >
           {entry.content}
         </div>
-        
+
         {/* Tool invocation details */}
         {entry.toolInvocation && entry.type === 'tool' && (
-          <div 
+          <div
             className="occ-feed-entry__details"
             style={{
               marginTop: 6,
@@ -178,21 +207,21 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
               color: 'var(--occ-text-dim)',
             }}
           >
-            {entry.toolInvocation.params?.file_path && (
+            {typeof entry.toolInvocation.params?.file_path === 'string' && (
               <span>📄 {entry.toolInvocation.params.file_path.split('/').pop()}</span>
             )}
-            {entry.toolInvocation.params?.command && (
+            {typeof entry.toolInvocation.params?.command === 'string' && (
               <span>⚙️ {entry.toolInvocation.params.command.split(' ').slice(0, 2).join(' ')}...</span>
             )}
-            {entry.toolInvocation.params?.query && (
-              <span>🔍 "{entry.toolInvocation.params.query.substring(0, 40)}..."</span>
+            {typeof entry.toolInvocation.params?.query === 'string' && (
+              <span>🔍 &quot;{entry.toolInvocation.params.query.substring(0, 40)}...&quot;</span>
             )}
           </div>
         )}
-        
+
         {/* Progress indicator for running tasks */}
         {entry.status === 'running' && (
-          <div 
+          <div
             className="occ-feed-entry__progress"
             style={{
               marginTop: 6,
@@ -201,7 +230,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
               gap: 8,
             }}
           >
-            <div 
+            <div
               style={{
                 flex: 1,
                 height: 3,
@@ -210,7 +239,7 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
                 overflow: 'hidden',
               }}
             >
-              <div 
+              <div
                 style={{
                   width: `${entry.progress || 30}%`,
                   height: '100%',
@@ -223,10 +252,10 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
             <span style={{ fontSize: 10, color: typeColor }}>Running</span>
           </div>
         )}
-        
+
         {/* Status indicator */}
         {entry.status === 'error' && (
-          <div 
+          <div
             className="occ-feed-entry__error"
             style={{
               marginTop: 6,
@@ -248,13 +277,13 @@ function ActivityItem({ entry, isActive }: ActivityItemProps) {
 
 // Active Tasks Panel
 function ActiveTasksPanel() {
-  const { activeTasks } = useGatewayStore();
-  const tasks = Array.from(activeTasks.values());
-  
-  if (tasks.length === 0) return null;
-  
+  const activeTasks = useActiveTasks();
+  const connected = useSessionsStore((state) => state.connected);
+
+  if (activeTasks.length === 0) return null;
+
   return (
-    <div 
+    <div
       className="occ-active-tasks"
       style={{
         marginBottom: 16,
@@ -264,7 +293,7 @@ function ActiveTasksPanel() {
         borderRadius: 8,
       }}
     >
-      <div 
+      <div
         className="occ-active-tasks__header"
         style={{
           display: 'flex',
@@ -274,19 +303,31 @@ function ActiveTasksPanel() {
         }}
       >
         <span style={{ fontSize: 14 }}>🔥</span>
-        <span style={{ 
-          fontSize: 12, 
-          fontWeight: 'bold',
-          color: '#22c55e',
-          textTransform: 'uppercase',
-        }}>
-          Active Tasks ({tasks.length})
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 'bold',
+            color: '#22c55e',
+            textTransform: 'uppercase',
+          }}
+        >
+          Active Tasks ({activeTasks.length})
         </span>
+        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: connected ? '#22c55e' : '#ef4444',
+            animation: connected ? 'pulse 2s ease-in-out infinite' : 'none',
+          }}
+        />
       </div>
-      
-      {tasks.map(task => (
-        <div 
-          key={task.id}
+
+      {activeTasks.map((task) => (
+        <div
+          key={`${task.crewId}-${task.startedAt}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -297,11 +338,12 @@ function ActiveTasksPanel() {
         >
           <span>{task.crewEmoji}</span>
           <span style={{ fontSize: 11, flex: 1 }}>
-            {task.task?.substring(0, 60) || 'Working...'}{task.task && task.task.length > 60 ? '...' : ''}
+            {task.task?.substring(0, 60) || 'Working...'}
+            {task.task && task.task.length > 60 ? '...' : ''}
           </span>
-          <span 
-            style={{ 
-              fontSize: 10, 
+          <span
+            style={{
+              fontSize: 10,
               color: '#22c55e',
               animation: 'pulse 1.5s ease-in-out infinite',
             }}
@@ -318,14 +360,16 @@ function ActiveTasksPanel() {
 function EmptyState({ connected }: { connected: boolean }) {
   if (!connected) {
     return (
-      <div style={{
-        color: 'var(--occ-text-dim)',
-        fontSize: 14,
-        padding: '60px 20px',
-        textAlign: 'center',
-        border: '2px dashed var(--occ-border)',
-        borderRadius: 12,
-      }}>
+      <div
+        style={{
+          color: 'var(--occ-text-dim)',
+          fontSize: 14,
+          padding: '60px 20px',
+          textAlign: 'center',
+          border: '2px dashed var(--occ-border)',
+          borderRadius: 12,
+        }}
+      >
         <div style={{ fontSize: 32, marginBottom: 16 }}>🔌</div>
         <div>Connecting to gateway...</div>
         <div style={{ fontSize: 12, color: 'var(--occ-text-dim)', marginTop: 8 }}>
@@ -334,27 +378,33 @@ function EmptyState({ connected }: { connected: boolean }) {
       </div>
     );
   }
-  
+
   return (
-    <div style={{
-      color: 'var(--occ-text-dim)',
-      fontSize: 14,
-      padding: '60px 20px',
-      textAlign: 'center',
-    }}>
+    <div
+      style={{
+        color: 'var(--occ-text-dim)',
+        fontSize: 14,
+        padding: '60px 20px',
+        textAlign: 'center',
+      }}
+    >
       <div style={{ fontSize: 32, marginBottom: 16 }}>📡</div>
       <div>Gateway connected</div>
       <div style={{ fontSize: 12, color: 'var(--occ-text-dim)', marginTop: 8 }}>
         Waiting for crew activity...
       </div>
-      <div style={{ 
-        fontSize: 11, 
-        color: 'var(--occ-text-dim)', 
-        marginTop: 16,
-        opacity: 0.7,
-      }}>
-        Activity feed will show:<br/>
-        🚀 Spawned tasks · ✅ Completed work<br/>
+      <div
+        style={{
+          fontSize: 11,
+          color: 'var(--occ-text-dim)',
+          marginTop: 16,
+          opacity: 0.7,
+        }}
+      >
+        Activity feed will show:
+        <br />
+        🚀 Spawned tasks · ✅ Completed work
+        <br />
         🛠️ Tool calls · 📄 File operations · ⚙️ Commands
       </div>
     </div>
@@ -362,63 +412,28 @@ function EmptyState({ connected }: { connected: boolean }) {
 }
 
 export default function ActivityFeed() {
-  const { feed, connected, activeTasks, feedFilter } = useGatewayStore();
+  // Use the new Phase 5 computed feed entries
+  const feed = useFilteredFeedEntries();
+  const activeTasks = useActiveTasks();
+  const connected = useSessionsStore((state) => state.connected);
+  const filter = useActivityFeedStore((state) => state.filter);
 
-  // Filter feed entries based on filter settings
-  const filteredFeed = feed.filter(entry => {
-    if (feedFilter.types?.length && !feedFilter.types.includes(entry.type)) {
-      return false;
-    }
-    if (feedFilter.crewIds?.length && !feedFilter.crewIds.includes(entry.crewId)) {
-      return false;
-    }
-    if (feedFilter.searchQuery) {
-      const query = feedFilter.searchQuery.toLowerCase();
-      return (
-        entry.content.toLowerCase().includes(query) ||
-        entry.task?.toLowerCase().includes(query) ||
-        entry.crewId.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
-
-  // Group consecutive entries from same crew
-  const groupedFeed: FeedEntry[] = [];
-  let lastCrewId: string | null = null;
-  let groupCount = 0;
-  
-  for (const entry of filteredFeed) {
-    if (entry.crewId === lastCrewId && entry.type === 'tool') {
-      // Group tool invocations from same crew
-      groupCount++;
-      const lastEntry = groupedFeed[groupedFeed.length - 1];
-      if (lastEntry && !lastEntry.isGrouped) {
-        lastEntry.isGrouped = true;
-        lastEntry.groupCount = 1;
-      }
-      if (lastEntry) {
-        lastEntry.groupCount = (lastEntry.groupCount || 1) + 1;
-      }
-    } else {
-      groupCount = 0;
-      groupedFeed.push({ ...entry });
-    }
-    lastCrewId = entry.crewId;
-  }
+  // Calculate active threshold (5 minutes ago)
+  const latestTimestamp = feed[0]?.timestamp ?? 0;
+  const activeThreshold = latestTimestamp - 300000;
 
   // Check if we have any content
-  const hasContent = groupedFeed.length > 0 || Object.keys(activeTasks).length > 0;
+  const hasContent = feed.length > 0 || activeTasks.length > 0;
 
   return (
     <div style={{ height: '100%', overflow: 'auto', padding: '0 8px' }}>
       {/* Active Tasks Panel */}
       <ActiveTasksPanel />
-      
+
       {/* Section Header */}
-      <div 
-        className="occ-section-header occ-section-header--purple" 
-        style={{ 
+      <div
+        className="occ-section-header occ-section-header--purple"
+        style={{
           marginBottom: 12,
           display: 'flex',
           alignItems: 'center',
@@ -427,16 +442,17 @@ export default function ActivityFeed() {
       >
         <div>
           <span className="occ-section-header__number">47-25</span>
-          <span style={{ marginLeft: 8 }}>SHIP'S LOG</span>
+          <span style={{ marginLeft: 8 }}>SHIP&apos;S LOG</span>
         </div>
-        <span 
-          style={{ 
-            fontSize: 11, 
+        <span
+          style={{
+            fontSize: 11,
             color: 'var(--occ-text-dim)',
             fontWeight: 'normal',
           }}
         >
-          {filteredFeed.length} entries
+          {feed.length} entries
+          {filter.types?.length ? ` · ${filter.types.join(', ')}` : ''}
         </span>
       </div>
 
@@ -445,17 +461,17 @@ export default function ActivityFeed() {
         <EmptyState connected={connected} />
       ) : (
         <div className="occ-feed-container">
-          {groupedFeed.map((entry) => (
-            <ActivityItem 
-              key={entry.id} 
-              entry={entry} 
-              isActive={entry.timestamp > Date.now() - 300000}
+          {feed.map((entry) => (
+            <ActivityItem
+              key={entry.id}
+              entry={entry}
+              isActive={entry.timestamp > activeThreshold}
             />
           ))}
-          
+
           {/* Group indicator */}
-          {groupedFeed.some(e => e.isGrouped) && (
-            <div 
+          {feed.some((e) => e.isGrouped) && (
+            <div
               style={{
                 textAlign: 'center',
                 fontSize: 10,
@@ -471,24 +487,24 @@ export default function ActivityFeed() {
       )}
 
       {/* System Messages Section - Only show when empty or at bottom */}
-      {filteredFeed.length === 0 && (
-        <div className="occ-section-header occ-section-header--cyan" style={{ marginTop: 16, marginBottom: 12 }}>
-          <span className="occ-section-header__number">47-26</span>
-          <span style={{ marginLeft: 8 }}>SYSTEM</span>
-        </div>
-      )}
-
-      {filteredFeed.length === 0 && (
-        <div className="occ-feed-entry">
-          <div className="occ-feed-entry__header">
-            <span className="occ-feed-entry__timestamp">SYS</span>
-            <span className="occ-feed-entry__crew">🔧</span>
-            <span className="occ-feed-entry__number">47-27</span>
+      {feed.length === 0 && (
+        <>
+          <div
+            className="occ-section-header occ-section-header--cyan"
+            style={{ marginTop: 16, marginBottom: 12 }}
+          >
+            <span className="occ-section-header__number">47-26</span>
+            <span style={{ marginLeft: 8 }}>SYSTEM</span>
           </div>
-          <div className="occ-feed-entry__content">
-            OCC Interface v47.1 - Online
+          <div className="occ-feed-entry">
+            <div className="occ-feed-entry__header">
+              <span className="occ-feed-entry__timestamp">SYS</span>
+              <span className="occ-feed-entry__crew">🔧</span>
+              <span className="occ-feed-entry__number">47-27</span>
+            </div>
+            <div className="occ-feed-entry__content">OCC Interface v47.2 — Online</div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

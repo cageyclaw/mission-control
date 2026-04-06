@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <style>
+      .title { font: 700 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #f7f2ff; }
+      .subtitle { font: 500 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #d9c7ff; }
+      .label { font: 700 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: white; }
+      .body { font: 500 15px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #f3f3f3; }
+      .small { font: 600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #f3f3f3; }
+      .legend { font: 600 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #ddd; }
+      .arrow { stroke: #ffd166; stroke-width: 4; fill: none; marker-end: url(#arrowhead); }
+      .arrow2 { stroke: #87d7ff; stroke-width: 4; fill: none; marker-end: url(#arrowheadBlue); }
+      .arrow3 { stroke: #7bd88f; stroke-width: 4; fill: none; marker-end: url(#arrowheadGreen); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#ffd166" />
+    </marker>
+    <marker id="arrowheadBlue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#87d7ff" />
+    </marker>
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7bd88f" />
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="980" fill="#120d18"/>
+
+  <text x="70" y="55" class="title">OPP Architecture Flow</text>
+  <text x="70" y="82" class="subtitle">Local same-machine deployment: where data comes from, how it reaches OPP, and what each path provides.</text>
+
+  <rect x="60" y="130" rx="22" ry="22" width="260" height="170" fill="#2b1f3a" stroke="#c58cff" stroke-width="3" filter="url(#shadow)"/>
+  <text x="90" y="170" class="label">Browser / OPP UI</text>
+  <text x="90" y="205" class="body">React dashboard</text>
+  <text x="90" y="232" class="body">Shows session data,</text>
+  <text x="90" y="259" class="body">context usage, chat,</text>
+  <text x="90" y="286" class="body">status, agent state</text>
+
+  <rect x="390" y="110" rx="22" ry="22" width="290" height="210" fill="#2e3f4f" stroke="#87d7ff" stroke-width="3" filter="url(#shadow)"/>
+  <text x="425" y="150" class="label">Vite Dev Server :5180</text>
+  <text x="425" y="185" class="body">Serves frontend assets</text>
+  <text x="425" y="212" class="body">and forwards local routes:</text>
+  <text x="425" y="247" class="small">/api → OPP backend bridge</text>
+  <text x="425" y="274" class="small">/ws → OPP websocket bridge</text>
+  <text x="425" y="301" class="small">/metrics → metrics server</text>
+
+  <rect x="770" y="95" rx="22" ry="22" width="320" height="155" fill="#4a3212" stroke="#ffb347" stroke-width="3" filter="url(#shadow)"/>
+  <text x="800" y="135" class="label">OPP Backend Bridge HTTP :5181</text>
+  <text x="800" y="170" class="body">proxy-server.mjs</text>
+  <text x="800" y="197" class="small">Provides /api/status</text>
+  <text x="800" y="224" class="small">Provides /api/chat/session</text>
+
+  <rect x="770" y="280" rx="22" ry="22" width="320" height="155" fill="#4a3212" stroke="#ffb347" stroke-width="3" filter="url(#shadow)"/>
+  <text x="800" y="320" class="label">OPP Backend Bridge WS :5182</text>
+  <text x="800" y="355" class="body">proxy-server.mjs</text>
+  <text x="800" y="382" class="small">Live websocket bridge</text>
+  <text x="800" y="409" class="small">Chat + tool events + session state</text>
+
+  <rect x="1190" y="140" rx="22" ry="22" width="330" height="420" fill="#3a2b12" stroke="#ffd166" stroke-width="3" filter="url(#shadow)"/>
+  <text x="1225" y="180" class="label">OpenClaw Gateway :18789</text>
+  <text x="1225" y="215" class="body">Source of truth for OPP</text>
+
+  <rect x="1230" y="250" rx="16" ry="16" width="250" height="85" fill="#523913" stroke="#ffd166" stroke-width="2"/>
+  <text x="1250" y="283" class="small">Sessions + Context</text>
+  <text x="1250" y="310" class="body">active sessions, models,</text>
+  <text x="1250" y="332" class="body">context/token usage</text>
+
+  <rect x="1230" y="355" rx="16" ry="16" width="250" height="85" fill="#523913" stroke="#ffd166" stroke-width="2"/>
+  <text x="1250" y="388" class="small">Chat + Tool Events</text>
+  <text x="1250" y="415" class="body">streaming replies, tool</text>
+  <text x="1250" y="437" class="body">activity, run state</text>
+
+  <rect x="1230" y="460" rx="16" ry="16" width="250" height="85" fill="#523913" stroke="#ffd166" stroke-width="2"/>
+  <text x="1250" y="493" class="small">Runtime Status</text>
+  <text x="1250" y="520" class="body">health, subagents,</text>
+  <text x="1250" y="542" class="body">system/runtime state</text>
+
+  <rect x="770" y="610" rx="22" ry="22" width="320" height="145" fill="#1f3a2b" stroke="#7bd88f" stroke-width="3" filter="url(#shadow)"/>
+  <text x="805" y="650" class="label">Metrics Server :18790</text>
+  <text x="805" y="685" class="body">Provides system metrics:</text>
+  <text x="805" y="712" class="small">CPU / Memory / Disk</text>
+
+  <path d="M320 215 C350 215, 360 215, 390 215" class="arrow2"/>
+  <text x="335" y="195" class="legend">load app + call local routes</text>
+
+  <path d="M680 190 C730 190, 725 165, 770 165" class="arrow"/>
+  <text x="675" y="165" class="legend">/api</text>
+
+  <path d="M680 245 C730 245, 725 355, 770 355" class="arrow"/>
+  <text x="690" y="275" class="legend">/ws</text>
+
+  <path d="M680 290 C730 290, 730 682, 770 682" class="arrow3"/>
+  <text x="685" y="520" class="legend">/metrics</text>
+
+  <path d="M1090 170 C1140 170, 1140 170, 1190 170" class="arrow"/>
+  <text x="1095" y="150" class="legend">status + session lookup</text>
+
+  <path d="M1090 355 C1140 355, 1140 355, 1190 355" class="arrow"/>
+  <text x="1095" y="335" class="legend">chat.send + event stream</text>
+
+  <rect x="60" y="825" rx="18" ry="18" width="1460" height="110" fill="#1b1622" stroke="#6f5b8a" stroke-width="2"/>
+  <text x="90" y="860" class="label">Legend / Naming</text>
+  <text x="90" y="892" class="legend">• Vite Dev Server = frontend web server + route forwarder (development convenience only)</text>
+  <text x="90" y="918" class="legend">• OPP Backend Bridge = proxy-server.mjs (actual OPP integration layer)</text>
+  <text x="760" y="892" class="legend">• OpenClaw Gateway = real backend authority for sessions, context, chat, and status</text>
+  <text x="760" y="918" class="legend">• Metrics Server = separate source for machine/system metrics</text>
+</svg>

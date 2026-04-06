@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, dialog } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
@@ -9,6 +9,20 @@ const __dirname = path.dirname(__filename);
 
 const isDev = !app.isPackaged;
 const isLinux = process.platform === 'linux';
+
+// Ensure we only ever run one Mission Control instance.
+// On a second launch, focus/restore the existing window.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
 
 function getIconPath() {
   const iconFile = isLinux ? 'icon-linux.png' : 'iconTemplate.png';
@@ -23,12 +37,18 @@ function getIconPath() {
 const iconPath = getIconPath();
 const APP_ICON = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
 
+function normalizeBaseUrl(value, fallback) {
+  const candidate = String(value ?? '').trim() || fallback;
+  return candidate.replace(/\/+$/, '');
+}
+
 const defaultSettings = {
-  gatewayHost: '127.0.0.1',
-  gatewayPort: 18789,
-  gatewayProtocol: 'ws',
-  proxyBaseUrl: 'http://127.0.0.1:5181',
-  metricsBaseUrl: 'http://127.0.0.1:18790',
+  gatewayHost: process.env.OCC_GATEWAY_HOST || '127.0.0.1',
+  gatewayPort: Number(process.env.OCC_GATEWAY_PORT || 18789),
+  gatewayProtocol: process.env.OCC_GATEWAY_PROTOCOL === 'wss' ? 'wss' : 'ws',
+  proxyBaseUrl: normalizeBaseUrl(process.env.OCC_PROXY_BASE_URL, 'http://127.0.0.1:5181'),
+  metricsBaseUrl: normalizeBaseUrl(process.env.OCC_METRICS_BASE_URL, 'http://127.0.0.1:18790'),
+  gatewayToken: process.env.OCC_GATEWAY_TOKEN || '',
 };
 
 let mainWindow = null;
@@ -101,21 +121,66 @@ function spawnService(scriptPath, name) {
   return child;
 }
 
+function firstExistingPath(candidates) {
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+}
+
+function resolveProxyScriptPath() {
+  const candidates = app.isPackaged
+    ? [
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'proxy-server.mjs'),
+        path.join(process.resourcesPath, 'proxy-server.mjs'),
+      ]
+    : [path.resolve(__dirname, '..', 'proxy-server.mjs')];
+
+  return firstExistingPath(candidates);
+}
+
+function resolveMetricsScriptPath() {
+  const candidates = app.isPackaged
+    ? [
+        path.join(process.resourcesPath, 'system-metrics-server', 'server.mjs'),
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'system-metrics-server', 'server.mjs'),
+      ]
+    : [path.resolve(__dirname, '..', '..', 'system-metrics-server', 'server.mjs')];
+
+  return firstExistingPath(candidates);
+}
+
+async function waitForProxyReady(timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs;
+  const proxyBaseUrl = normalizeBaseUrl(runtimeSettings?.proxyBaseUrl, defaultSettings.proxyBaseUrl);
+  const endpoint = `${proxyBaseUrl}/api/health`;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(endpoint, { signal: AbortSignal.timeout(1200) });
+      if (response.ok) return true;
+    } catch {
+      // Keep retrying until timeout
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  return false;
+}
+
 function startServices() {
-  const base = app.isPackaged ? process.resourcesPath : path.resolve(__dirname, '..');
-  const proxyScript = app.isPackaged
-    ? path.join(process.resourcesPath, 'app.asar.unpacked', 'proxy-server.mjs')
-    : path.join(base, 'proxy-server.mjs');
+  const proxyScript = resolveProxyScriptPath();
+  const metricsScript = resolveMetricsScriptPath();
 
-  const metricsScript = app.isPackaged
-    ? path.join(process.resourcesPath, 'system-metrics-server', 'server.mjs')
-    : path.resolve(base, '..', '..', 'system-metrics-server', 'server.mjs');
+  if (proxyScript) {
+    proxyProc = spawnService(proxyScript, 'proxy');
+  } else {
+    console.error('[startup] Proxy script not found in expected packaged/dev locations');
+  }
 
-  if (fs.existsSync(proxyScript)) proxyProc = spawnService(proxyScript, 'proxy');
-  else console.error('Proxy script not found:', proxyScript);
-
-  if (fs.existsSync(metricsScript)) metricsProc = spawnService(metricsScript, 'metrics');
-  else console.error('Metrics script not found:', metricsScript);
+  if (metricsScript) {
+    metricsProc = spawnService(metricsScript, 'metrics');
+  } else {
+    console.warn('[startup] Metrics script not found; continuing without system metrics service');
+  }
 }
 
 function stopServices() {
@@ -204,14 +269,50 @@ function createTray() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   runtimeSettings = loadSettings();
   startServices();
+
+  if (app.isPackaged) {
+    const proxyReady = await waitForProxyReady(9000);
+    if (!proxyReady) {
+      console.warn('[startup] Proxy health endpoint did not become ready before renderer launch');
+    }
+  }
+
   createWindow();
   createTray();
 
   ipcMain.handle('settings:get', () => runtimeSettings ?? loadSettings());
   ipcMain.handle('settings:set', (_event, settings) => saveSettings(settings));
+  ipcMain.handle('dialog:confirm', async (_event, options) => {
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      title: options?.title || 'Confirm Action',
+      message: options?.message || 'Are you sure?',
+      detail: options?.detail || '',
+      buttons: [options?.confirmLabel || 'Confirm', options?.cancelLabel || 'Cancel'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    });
+    return result.response === 0;
+  });
+  ipcMain.handle('dialog:notice', async (_event, options) => {
+    await dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: options?.title || 'Mission Control',
+      message: options?.message || '',
+      detail: options?.detail || '',
+      buttons: ['OK'],
+      defaultId: 0,
+      noLink: true,
+    });
+  });
+  ipcMain.handle('app:reload-window', () => {
+    const targetWindow = BrowserWindow.getFocusedWindow() || mainWindow;
+    targetWindow?.webContents.reloadIgnoringCache();
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

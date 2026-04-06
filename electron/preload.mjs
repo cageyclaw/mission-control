@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld('missionControl', {
     ipcRenderer.on('settings:changed', listener);
     return () => ipcRenderer.removeListener('settings:changed', listener);
   },
+  confirmAction: (options) => ipcRenderer.invoke('dialog:confirm', options),
+  showNotice: (options) => ipcRenderer.invoke('dialog:notice', options),
+  reloadWindow: () => ipcRenderer.invoke('app:reload-window'),
 });

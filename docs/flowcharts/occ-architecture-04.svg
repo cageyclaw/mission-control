@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#0a0a0f"/>
+  
+  <!-- Grid lines -->
+  <g opacity="0.08">
+    <line x1="0" y1="240" x2="1920" y2="240" stroke="#00aaff" stroke-width="1"/>
+    <line x1="0" y1="460" x2="1920" y2="460" stroke="#00aaff" stroke-width="1"/>
+    <line x1="0" y1="680" x2="1920" y2="680" stroke="#00aaff" stroke-width="1"/>
+    <line x1="0" y1="900" x2="1920" y2="900" stroke="#00aaff" stroke-width="1"/>
+    <line x1="480" y1="120" x2="480" y2="1080" stroke="#cc88ff" stroke-width="1"/>
+    <line x1="960" y1="120" x2="960" y2="1080" stroke="#cc88ff" stroke-width="1"/>
+    <line x1="1440" y1="120" x2="1440" y2="1080" stroke="#cc88ff" stroke-width="1"/>
+  </g>
+
+  <!-- HEADER -->
+  <g transform="translate(40, 30)">
+    <rect x="0" y="0" width="140" height="70" rx="35" ry="35" fill="#cc88ff"/>
+    <text x="70" y="48" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="#0a0a0f" text-anchor="middle">47-04</text>
+    
+    <rect x="160" y="5" width="1200" height="35" rx="17" ry="17" fill="#ff9900"/>
+    <text x="180" y="30" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#0a0a0f">ACTIVITY FEED COMPUTATION</text>
+    
+    <rect x="160" y="45" width="1000" height="25" rx="12" ry="12" fill="#00aaff"/>
+    <text x="180" y="63" font-family="Arial, sans-serif" font-size="14" fill="#0a0a0f">Event Sourcing, Pipeline Processing, UI Hooks</text>
+    
+    <rect x="1380" y="5" width="80" height="65" rx="10" ry="10" fill="#ff9900"/>
+    <rect x="1470" y="5" width="60" height="65" rx="10" ry="10" fill="#00aaff"/>
+    <rect x="1540" y="5" width="60" height="65" rx="10" ry="10" fill="#cc88ff"/>
+    <rect x="1610" y="5" width="40" height="65" rx="8" ry="8" fill="#ff4444"/>
+    <rect x="1660" y="5" width="180" height="65" rx="10" ry="10" fill="#0a0a0f" stroke="#ffcc00" stroke-width="2"/>
+  </g>
+
+  <!-- SOURCE STORES -->
+  <g transform="translate(40, 130)">
+    <rect x="0" y="0" width="400" height="920" rx="20" ry="20" fill="#0a0a0f" stroke="#00aaff" stroke-width="4" filter="url(#shadow)"/>
+    
+    <rect x="20" y="20" width="200" height="32" rx="16" ry="16" fill="#00aaff"/>
+    <text x="120" y="43" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#0a0a0f" text-anchor="middle">SOURCE STORES</text>
+    
+    <!-- Sessions Store -->
+    <rect x="30" y="70" width="340" height="120" rx="12" ry="12" fill="#1a1a2a" stroke="#ff9900" stroke-width="2"/>
+    
+    <text x="200" y="100" font-family="monospace" font-size="14" fill="#ff9900" text-anchor="middle" font-weight="bold">Sessions Store</text>
+    
+    <text x="50" y="130" font-family="monospace" font-size="11" fill="#888899">• sessionsByKey: Map</text>
+    <text x="50" y="155" font-family="monospace" font-size="11" fill="#888899">• sessionKeys: string[]</text>
+    <text x="50" y="175" font-family="monospace" font-size="11" fill="#888899">• selectedSessionKey</text>
+    
+    <!-- Arrow to computation -->
+    <line x1="200" y1="190" x2="200" y2="210" stroke="#ff9900" stroke-width="2"/>
+    <polygon points="200,210 190,200 210,200" fill="#ff9900"/>
+    
+    <!-- Chat Store -->
+    <rect x="30" y="230" width="340" height="120" rx="12" ry="12" fill="#1a1a2a" stroke="#00aaff" stroke-width="2"/>
+    
+    <text x="200" y="260" font-family="monospace" font-size="14" fill="#00aaff" text-anchor="middle" font-weight="bold">Chat Store</text>
+    
+    <text x="50" y="290" font-family="monospace" font-size="11" fill="#888899">• transcript: ChatMessage[]</text>
+    <text x="50" y="315" font-family="monospace" font-size="11" fill="#888899">• sessionKey: string</text>
+    <text x="50" y="335" font-family="monospace" font-size="11" fill="#888899">• stream: StreamState</text>
+    
+    <!-- Arrow -->
+    <line x1="200" y1="350" x2="200" y2="370" stroke="#00aaff" stroke-width="2"/>
+    <polygon points="200,370 190,360 210,360" fill="#00aaff"/>
+    
+    <!-- Tool Store -->
+    <rect x="30" y="390" width="340" height="120" rx="12" ry="12" fill="#1a1a2a" stroke="#cc88ff" stroke-width="2"/>
+    
+    <text x="200" y="420" font-family="monospace" font-size="14" fill="#cc88ff" text-anchor="middle" font-weight="bold">Tool Store</text>
+    
+    <text x="50" y="450" font-family="monospace" font-size="11" fill="#888899">• byId: Map of tool runs</text>
+    <text x="50" y="475" font-family="monospace" font-size="11" fill="#888899">• idsBySession: Map of IDs</text>
+    <text x="50" y="495" font-family="monospace" font-size="11" fill="#888899">• toolRuns: ToolRun[]</text>
+    
+    <!-- Subscription note -->
+    <rect x="30" y="550" width="340" height="80" rx="12" ry="12" fill="#1a1a2a" stroke="#ffcc00" stroke-width="2"/>
+    
+    <text x="200" y="580" font-family="monospace" font-size="12" fill="#ffcc00" text-anchor="middle" font-weight="bold">SUBSCRIPTION</text>
+    
+    <text x="200" y="610" font-family="monospace" font-size="11" fill="#888899" text-anchor="middle">useComputedFeedEntries()</text>
+  </g>
+
+  <!-- ENTRY COMPUTATION -->
+  <g transform="translate(470, 130)">
+    <rect x="0" y="0" width="400" height="920" rx="20" ry="20" fill="#0a0a0f" stroke="#ff9900" stroke-width="4" filter="url(#shadow)"/>
+    
+    <rect x="20" y="20" width="220" height="32" rx="16" ry="16" fill="#ff9900"/>
+    <text x="130" y="43" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#0a0a0f" text-anchor="middle">ENTRY COMPUTATION</text>
+    
+    <!-- Session entries -->
+    <rect x="30" y="70" width="340" height="140" rx="12" ry="12" fill="#1a1a2a" stroke="#ff9900" stroke-width="2"/>
+    
+    <text x="200" y="100" font-family="monospace" font-size="13" fill="#ff9900" text-anchor="middle" font-weight="bold">Session Entries</text>
+    
+    <text x="50" y="130" font-family="monospace" font-size="11" fill="#ffffff">Spawn: id=spawn:{sessionId}</text>
+    
+    <text x="50" y="155" font-family="monospace" font-size="11" fill="#ffffff">Complete: id=complete:{id}</text>
+    
+    <text x="50" y="180" font-family="monospace" font-size="11" fill="#ff4444">Error: id=error:{id}</text>
+    
+    <text x="50" y="200" font-family="monospace" font-size="10" fill="#888899">Crew context attached</text>
+    
+    <!-- Chat entries -->
+    <rect x="30" y="230" width="340" height="120" rx="12" ry="12" fill="#1a1a2a" stroke="#00aaff" stroke-width="2"/>
+    
+    <text x="200" y="260" font-family="monospace" font-size="13" fill="#00aaff" text-anchor="middle" font-weight="bold">Chat Entries</text>
+    
+    <text x="50" y="290" font-family="monospace" font-size="11" fill="#ffffff">User: crewId='user', emoji='user'</text>
+    
+    <text x="50" y="315" font-family="monospace" font-size="11" fill="#ffffff">Assistant: crew from session</text>
+    
+    <text x="50" y="335" font-family="monospace" font-size="10" fill="#888899">Content truncated to 200 chars</text>
+    
+    <!-- Tool entries -->
+    <rect x="30" y="370" width="340" height="160" rx="12" ry="12" fill="#1a1a2a" stroke="#cc88ff" stroke-width="2"/>
+    
+    <text x="200" y="400" font-family="monospace" font-size="13" fill="#cc88ff" text-anchor="middle" font-weight="bold">Tool Entries</text>
+    
+    <text x="50" y="430" font-family="monospace" font-size="11" fill="#ffffff">Type: file | process | search</text>
+    
+    <text x="50" y="455" font-family="monospace" font-size="11" fill="#ffffff">Status: running | success | error</text>
+    
+    <text x="50" y="480" font-family="monospace" font-size="11" fill="#888899">ToolInvocation metadata</text>
+    
+    <text x="50" y="505" font-family="monospace" font-size="11" fill="#888899">No separate completion entry</text>
+    
+    <!-- Entry types -->
+    <rect x="30" y="550" width="340" height="120" rx="12" ry="12" fill="#1a1a2a" stroke="#ffcc00" stroke-width="2"/>
+    
+    <text x="200" y="580" font-family="monospace" font-size="13" fill="#ffcc00" text-anchor="middle" font-weight="bold">FeedEntry Types</text>
+    
+    <text x="50" y="610" font-family="monospace" font-size="11" fill="#ffffff">id, timestamp, content</text>
+    
+    <text x="50" y="635" font-family="monospace" font-size="11" fill="#ffffff">status, crew, source</text>
+    
+    <text x="50" y="655" font-family="monospace" font-size="11" fill="#888899">feed | chat | tool</text>
+  </g>
+
+  <!-- PROCESSING PIPELINE -->
+  <g transform="translate(900, 130)">
+    <rect x="0" y="0" width="400" height="920" rx="20" ry="20" fill="#0a0a0f" stroke="#cc88ff" stroke-width="4" filter="url(#shadow)"/>
+    
+    <rect x="20" y="20" width="240" height="32" rx="16" ry="16" fill="#cc88ff"/>
+    <text x="140" y="43" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#0a0a0f" text-anchor="middle">PROCESSING PIPELINE</text>
+    
+    <!-- Combine -->
+    <rect x="30" y="70" width="340" height="80" rx="12" ry="12" fill="#1a1a2a" stroke="#ff9900" stroke-width="2"/>
+    
+    <text x="200" y="100" font-family="monospace" font-size="14" fill="#ff9900" text-anchor="middle" font-weight="bold">1. COMBINE</text>
+    
+    <text x="200" y="130" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle">Session + Chat + Tool entries</text>
+    
+    <!-- Arrow -->
+    <polygon points="200,160 190,180 210,180" fill="#ff9900"/>
+    
+    <!-- Sort -->
+    <rect x="30" y="190" width="340" height="80" rx="12" ry="12" fill="#1a1a2a" stroke="#00aaff" stroke-width="2"/>
+    
+    <text x="200" y="220" font-family="monospace" font-size="14" fill="#00aaff" text-anchor="middle" font-weight="bold">2. SORT</text>
+    
+    <text x="200" y="250" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle">By displayTimestamp (desc)</text>
+    
+    <!-- Arrow -->
+    <polygon points="200,280 190,300 210,300" fill="#00aaff"/>
+    
+    <!-- Deduplicate -->
+    <rect x="30" y="310" width="340" height="80" rx="12" ry="12" fill="#1a1a2a" stroke="#cc88ff" stroke-width="2"/>
+    
+    <text x="200" y="340" font-family="monospace" font-size="14" fill="#cc88ff" text-anchor="middle" font-weight="bold">3. DEDUPLICATE</text>
+    
+    <text x="200" y="370" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle">By ID (keep first)</text>
+    
+    <!-- Arrow -->
+    <polygon points="200,400 190,420 210,420" fill="#cc88ff"/>
+    
+    <!-- Filter -->
+    <rect x="30" y="430" width="340" height="100" rx="12" ry="12" fill="#1a1a2a" stroke="#ffcc00" stroke-width="2"/>
+    
+    <text x="200" y="460" font-family="monospace" font-size="14" fill="#ffcc00" text-anchor="middle" font-weight="bold">4. FILTER</text>
+    
+    <text x="200" y="490" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">Types | Crew | Search | Time</text>
+    
+    <text x="200" y="515" font-family="monospace" font-size="10" fill="#888899" text-anchor="middle">Filter settings from store</text>
+    
+    <!-- Arrow -->
+    <polygon points="200,540 190,560 210,560" fill="#ffcc00"/>
+    
+    <!-- Group -->
+    <rect x="30" y="570" width="340" height="80" rx="12" ry="12" fill="#1a1a2a" stroke="#00ff00" stroke-width="2"/>
+    
+    <text x="200" y="600" font-family="monospace" font-size="14" fill="#00ff00" text-anchor="middle" font-weight="bold">5. GROUP</text>
+    
+    <text x="200" y="630" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle">Consecutive tool entries</text>
+    
+    <!-- Result -->
+    <rect x="30" y="670" width="340" height="80" rx="12" ry="12" fill="#0a0a0f" stroke="#ffffff" stroke-width="3"/>
+    
+    <text x="200" y="700" font-family="monospace" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">RESULT</text>
+    
+    <text x="200" y="730" font-family="monospace" font-size="12" fill="#ffffff" text-anchor="middle">ComputedFeedEntry[]</text>
+    
+    <!-- Arrow to right -->
+    <line x1="400" y1="710" x2="450" y2="710" stroke="#ffffff" stroke-width="3"/>
+    <polygon points="450,700 470,710 450,720" fill="#ffffff"/>
+  </g>
+
+  <!-- UI HOOKS -->
+  <g transform="translate(1340, 130)">
+    <rect x="0" y="0" width="520" height="920" rx="20" ry="20" fill="#0a0a0f" stroke="#00aaff" stroke-width="4" filter="url(#shadow)"/>
+    
+    <rect x="20" y="20" width="150" height="32" rx="16" ry="16" fill="#00aaff"/>
+    <text x="95" y="43" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="#0a0a0f" text-anchor="middle">UI HOOKS</text>
+    
+    <!-- Hook 1 -->
+    <rect x="30" y="70" width="460" height="100" rx="12" ry="12" fill="#1a1a2a" stroke="#ff9900" stroke-width="2"/>
+    
+    <text x="260" y="100" font-family="monospace" font-size="13" fill="#ff9900" text-anchor="middle" font-weight="bold">useFilteredFeedEntries()</text>
+    
+    <text x="260" y="130" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">Apply filter settings to computed entries</text>
+    
+    <text x="260" y="155" font-family="monospace" font-size="11" fill="#888899" text-anchor="middle">Returns FeedEntry[] for ActivityFeed component</text>
+    
+    <!-- Hook 2 -->
+    <rect x="30" y="190" width="460" height="100" rx="12" ry="12" fill="#1a1a2a" stroke="#00aaff" stroke-width="2"/>
+    
+    <text x="260" y="220" font-family="monospace" font-size="13" fill="#00aaff" text-anchor="middle" font-weight="bold">useActiveTasks()</text>
+    
+    <text x="260" y="250" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">Derive running sessions/tools</text>
+    
+    <text x="260" y="275" font-family="monospace" font-size="11" fill="#888899" text-anchor="middle">Returns ActiveTask[] for Ship's Log panel</text>
+    
+    <!-- Hook 3 -->
+    <rect x="30" y="310" width="460" height="100" rx="12" ry="12" fill="#1a1a2a" stroke="#cc88ff" stroke-width="2"/>
+    
+    <text x="260" y="340" font-family="monospace" font-size="13" fill="#cc88ff" text-anchor="middle" font-weight="bold">useFeedCountsByType()</text>
+    
+    <text x="260" y="370" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">Count entries by type for badges</text>
+    
+    <text x="260" y="395" font-family="monospace" font-size="11" fill="#888899" text-anchor="middle">Returns Record type counts</text>
+    
+    <!-- Hook 4 -->
+    <rect x="30" y="430" width="460" height="100" rx="12" ry="12" fill="#1a1a2a" stroke="#ffcc00" stroke-width="2"/>
+    
+    <text x="260" y="460" font-family="monospace" font-size="13" fill="#ffcc00" text-anchor="middle" font-weight="bold">useLastActivityTimestamp()</text>
+    
+    <text x="260" y="490" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">Latest activity timestamp</text>
+    
+    <text x="260" y="515" font-family="monospace" font-size="11" fill="#888899" text-anchor="middle">For last activity indicator</text>
+    
+    <!-- Memoization note -->
+    <rect x="30" y="550" width="460" height="120" rx="12" ry="12" fill="#1a1a2a" stroke="#00ff00" stroke-width="2"/>
+    
+    <text x="260" y="580" font-family="monospace" font-size="13" fill="#00ff00" text-anchor="middle" font-weight="bold">PERFORMANCE</text>
+    
+    <text x="260" y="610" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">useMemo() prevents recomputation</text>
+    
+    <text x="260" y="635" font-family="monospace" font-size="11" fill="#ffffff" text-anchor="middle">Source stores tracked with subscribe</text>
+    
+    <text x="260" y="660" font-family="monospace" font-size="11" fill="#888899" text-anchor="middle">Only recomputes when sources change</text>
+    
+    <!-- ActivityFeed Component -->
+    <rect x="30" y="690" width="460" height="100" rx="12" ry="12" fill="#0a0a0f" stroke="#ffffff" stroke-width="2"/>
+    
+    <text x="260" y="725" font-family="monospace" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">ActivityFeed Component</text>
+    
+    <text x="260" y="755" font-family="monospace" font-size="12" fill="#888899" text-anchor="middle">Renders feed entries plus ship's log</text>
+    
+    <!-- LCARS deco -->
+    <rect x="30" y="820" width="100" height="60" rx="8" fill="#ff9900"/>
+    <rect x="140" y="820" width="80" height="60" rx="8" fill="#00aaff"/>
+    <rect x="230" y="820" width="80" height="60" rx="8" fill="#cc88ff"/>
+    <rect x="320" y="820" width="60" height="60" rx="8" fill="#ff4444"/>
+    <rect x="390" y="820" width="100" height="60" rx="8" fill="#0a0a0f" stroke="#ffcc00" stroke-width="2"/>
+  </g>
+</svg>

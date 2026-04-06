@@ -1,35 +1,66 @@
+export interface DeviceIdentitySettings {
+  id: string;
+  publicKey: string;
+  privateKey: string;
+}
+
 export interface MissionControlSettings {
   gatewayHost: string;
   gatewayPort: number;
   gatewayProtocol: 'ws' | 'wss';
+  /** @deprecated Proxy server removed in Phase 7. Use gateway client directly. */
   proxyBaseUrl: string;
   metricsBaseUrl: string;
+  gatewayToken?: string;
+  gatewayPassword?: string;
+  gatewayDeviceToken?: string;
+  deviceIdentity?: DeviceIdentitySettings;
 }
 
 // Detect if running in Electron or browser
-const isElectron = typeof window !== 'undefined' && window.missionControl?.isElectron;
+const browserWindow = typeof window !== 'undefined' ? window : undefined;
+const isElectron = browserWindow?.missionControl?.isElectron === true;
+const browserLocation = browserWindow?.location;
 
-// For web deployment (Cloudflare tunnel), use relative URLs
-// For Electron app, use localhost
+// Phase 7: Native gateway client - no proxy server
+// Settings only need gateway endpoint now
 const defaults: MissionControlSettings = isElectron
   ? {
       gatewayHost: '127.0.0.1',
       gatewayPort: 18789,
       gatewayProtocol: 'ws',
-      proxyBaseUrl: 'http://127.0.0.1:5181',
+      proxyBaseUrl: '', // Phase 7: Proxy server removed
       metricsBaseUrl: 'http://127.0.0.1:18790',
+      gatewayToken: '',
+      gatewayPassword: '',
+      gatewayDeviceToken: '',
     }
   : {
-      // Web mode - use relative URLs through Cloudflare tunnel
-      gatewayHost: window.location.hostname,
-      gatewayPort: 443,
-      gatewayProtocol: window.location.protocol === 'https:' ? 'wss' : 'ws',
-      proxyBaseUrl: '', // Use relative URLs (same origin)
-      metricsBaseUrl: '/metrics', // Proxied through Cloudflare tunnel
+      // Web mode - connects directly to gateway via WebSocket
+      // Use relative URLs if gateway is on same origin
+      gatewayHost: browserLocation?.hostname ?? '127.0.0.1',
+      gatewayPort: browserLocation?.protocol === 'https:' ? 443 : 80,
+      gatewayProtocol: browserLocation?.protocol === 'https:' ? 'wss' : 'ws',
+      proxyBaseUrl: '', // Phase 7: Proxy server removed
+      metricsBaseUrl: '/metrics',
+      gatewayToken: '',
+      gatewayPassword: '',
+      gatewayDeviceToken: '',
     };
 
 let cached: MissionControlSettings | null = null;
 let settingsChangeSubscribed = false;
+
+function normalizeBaseUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return trimmed.replace(/\/+$/, '');
+}
+
+function joinBaseUrl(base: string, pathname: string): string {
+  if (!base) return pathname;
+  return `${normalizeBaseUrl(base)}${pathname.startsWith('/') ? pathname : `/${pathname}`}`;
+}
 
 function subscribeToElectronSettingsChanges() {
   if (settingsChangeSubscribed || !window.missionControl?.onSettingsChanged) return;
@@ -49,6 +80,11 @@ export async function getSettings(): Promise<MissionControlSettings> {
   } else {
     const raw = localStorage.getItem('mission-control-settings');
     cached = raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
+  }
+
+  if (cached) {
+    cached.proxyBaseUrl = normalizeBaseUrl(cached.proxyBaseUrl);
+    cached.metricsBaseUrl = normalizeBaseUrl(cached.metricsBaseUrl);
   }
 
   return cached ?? defaults;
@@ -72,12 +108,19 @@ export async function resolveGatewayWsUrl() {
   return `${s.gatewayProtocol}://${s.gatewayHost}:${s.gatewayPort}`;
 }
 
-export async function resolveProxyUrl(pathname: string) {
-  const s = await getSettings();
-  return `${s.proxyBaseUrl}${pathname}`;
+/**
+ * @deprecated Proxy server removed in Phase 7. Use gateway client RPC methods instead.
+ * Kept for backward compatibility with external callers.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function resolveProxyUrl(_pathname: string) {
+  // Phase 7: Proxy server removed. This function returns an empty string
+  // which will cause fetch() calls to fail appropriately.
+  console.warn('[config] resolveProxyUrl is deprecated. Proxy server removed in Phase 7.');
+  return '';
 }
 
 export async function resolveMetricsUrl(pathname: string) {
   const s = await getSettings();
-  return `${s.metricsBaseUrl}${pathname}`;
+  return joinBaseUrl(s.metricsBaseUrl, pathname);
 }

@@ -1,19 +1,20 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useGatewayStore } from '../../stores/gateway';
-import { detectCrew, formatTokens } from '../../utils/crew';
+import { useSessionsStore } from '../../stores/sessionsStore';
+import { formatTokens } from '../../utils/crew';
 
 export default function CrewDetail() {
-  const { selectedCrewId, selectCrew, activeCrew, sessions } = useGatewayStore();
+  const { selectedCrewId, selectCrew, activeCrew } = useGatewayStore();
+  const crewSessions = useSessionsStore(
+    useShallow((state) =>
+      selectedCrewId ? state.getSessionsForCrew(selectedCrewId) : []
+    )
+  );
 
   if (!selectedCrewId) return null;
 
   const member = activeCrew.find(c => c.id === selectedCrewId);
   if (!member) return null;
-
-  // Find sessions associated with this crew member
-  const crewSessions = sessions.filter(s => {
-    const crew = detectCrew(s.key);
-    return crew?.id === selectedCrewId;
-  });
 
   const primarySession = crewSessions[0];
 

@@ -1,52 +1,43 @@
 import { useEffect, useMemo } from 'react';
-import { useGatewayStore } from '../../stores/gateway';
+import { useShallow } from 'zustand/react/shallow';
+import { useSessionsStore } from '../../stores/sessionsStore';
+import { useHostMetricsStore } from '../../stores/hostMetricsStore';
 import Gauge from '../ui/Gauge';
 
 const OCC_ORANGE = '#FF9900';
 
+/**
+ * ShipStatus — Host System Metrics Panel
+ *
+ * Displays HOST METRICS (CPU, Memory, Disk) from the optional metrics sidecar.
+ * These are NOT gateway metrics — they are OS-level system metrics.
+ *
+ * For gateway health/connection status, see SystemView.tsx
+ */
 export default function ShipStatus() {
-  const { sessions, systemMetrics, fetchSystemMetrics } = useGatewayStore();
+  // Use sessionsStore for live session data (Phase 7)
+  // useShallow prevents infinite loop from new array references
+  const sessions = useSessionsStore(
+    useShallow((state) => state.getSessions())
+  );
+  const { metrics: hostMetrics, startPolling, stopPolling } = useHostMetricsStore();
 
-  // Poll system metrics every 5 seconds
+  // Poll host metrics via the dedicated store
   useEffect(() => {
-    fetchSystemMetrics();
-    const interval = setInterval(() => {
-      fetchSystemMetrics();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [fetchSystemMetrics]);
+    startPolling(5000);
+    return () => stopPolling();
+  }, [startPolling, stopPolling]);
 
   const sessionContextPressure = useMemo(() => {
     if (sessions.length === 0) return 0;
 
-    const totals = sessions.reduce(
-      (acc, session) => {
-        const used = session.totalTokens ?? 0;
-        const remaining = session.remainingTokens ?? 0;
-        const capacity = used + remaining;
+    // Calculate average percentUsed across all sessions
+    // (Each session's percentUsed is already calculated from totalTokens/contextTokens)
+    const totalPercent = sessions.reduce((sum, session) => {
+      return sum + (session.percentUsed ?? 0);
+    }, 0);
 
-        if (capacity > 0) {
-          acc.used += used;
-          acc.capacity += capacity;
-        } else if (typeof session.percentUsed === 'number') {
-          acc.fallbackPercentSum += session.percentUsed;
-          acc.fallbackCount += 1;
-        }
-
-        return acc;
-      },
-      { used: 0, capacity: 0, fallbackPercentSum: 0, fallbackCount: 0 }
-    );
-
-    if (totals.capacity > 0) {
-      return Math.min((totals.used / totals.capacity) * 100, 100);
-    }
-
-    if (totals.fallbackCount > 0) {
-      return Math.min(totals.fallbackPercentSum / totals.fallbackCount, 100);
-    }
-
-    return 0;
+    return Math.min(Math.round(totalPercent / sessions.length), 100);
   }, [sessions]);
 
   const highContextSessions = useMemo(
@@ -76,7 +67,7 @@ export default function ShipStatus() {
       >
         {/* CPU Gauge */}
         <Gauge
-          value={systemMetrics?.cpu?.usage ?? 0}
+          value={hostMetrics?.cpu?.usage ?? 0}
           label="CPU"
           refNumber="47-32"
           unit="%"
@@ -84,7 +75,7 @@ export default function ShipStatus() {
 
         {/* Memory Gauge */}
         <Gauge
-          value={systemMetrics?.memory?.percent ?? 0}
+          value={hostMetrics?.memory?.percent ?? 0}
           label="MEMORY"
           refNumber="47-33"
           unit="%"
@@ -92,7 +83,7 @@ export default function ShipStatus() {
 
         {/* Disk Gauge */}
         <Gauge
-          value={systemMetrics?.disk?.percent ?? 0}
+          value={hostMetrics?.disk?.percent ?? 0}
           label="DISK"
           refNumber="47-34"
           unit="%"
@@ -128,22 +119,22 @@ export default function ShipStatus() {
         
         <div style={{ fontSize: '12px', marginBottom: '4px' }}>
           <span style={{ color: '#66CCFF' }}>
-            {systemMetrics?.memory?.used ?? 0} MB
+            {hostMetrics?.memory?.used ?? 0} MB
           </span>
           <span style={{ color: '#666666' }}> / </span>
           <span style={{ color: '#888888' }}>
-            {systemMetrics?.memory?.total ?? 0} MB
+            {hostMetrics?.memory?.total ?? 0} MB
           </span>
           <span style={{ color: '#666666', marginLeft: 8 }}>MEMORY</span>
         </div>
-        
+
         <div style={{ fontSize: '12px', marginBottom: '4px' }}>
           <span style={{ color: '#66CCFF' }}>
-            {systemMetrics?.disk?.used ?? 0} GB
+            {hostMetrics?.disk?.used ?? 0} GB
           </span>
           <span style={{ color: '#666666' }}> / </span>
           <span style={{ color: '#888888' }}>
-            {systemMetrics?.disk?.total ?? 0} GB
+            {hostMetrics?.disk?.total ?? 0} GB
           </span>
           <span style={{ color: '#666666', marginLeft: 8 }}>DISK</span>
         </div>

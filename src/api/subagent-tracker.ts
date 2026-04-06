@@ -1,105 +1,75 @@
 /**
- * Subagent Tracker Module
- * 
- * Tracks subagent spawn/completion events and updates the Mission Control dashboard.
- * This module intercepts subagent lifecycle events and maps them to crew members.
+ * Subagent Tracker Module — Phase 7 (Deprecated)
+ *
+ * This module provided subagent tracking functionality during the transition
+ * from hybrid architecture to native gateway client.
+ *
+ * In Phase 7+, subagent tracking is handled by:
+ *   - sessionsStore.ts — Receives session lifecycle events from gateway
+ *   - activityFeedStore.ts — Computes feed entries from gateway events
+ *   - toolStore.ts — Receives tool activity from gateway events
+ *
+ * This module is kept for backward compatibility but all functions are
+ * no-ops. The subagent lifecycle is now fully managed by the gateway client.
+ *
+ * @deprecated Use stores/sessionsStore.ts and stores/activityFeedStore.ts instead
  */
-
-import { useGatewayStore } from '../stores/gateway';
-import { inferCrewFromTask, getSubagentMapping } from '../utils/crew';
 
 /**
  * Track a subagent spawn event
- * Call this when spawning a subagent via sessions_spawn
+ * @deprecated Gateway events now automatically handle subagent tracking
  */
 export function trackSubagentSpawn(
-  sessionKey: string,
-  task?: string,
-  agentIdHint?: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _sessionKey: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _task?: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _agentIdHint?: string
 ): void {
-  const store = useGatewayStore.getState();
-
-  // Determine crew from task or agent hint
-  let crewId = agentIdHint || inferCrewFromTask(task);
-
-  // If still unknown, check if we can parse from task more broadly
-  if (!crewId && task) {
-    const taskLower = task.toLowerCase();
-    // Check for explicit crew mentions
-    if (taskLower.includes('riker')) crewId = 'riker';
-    else if (taskLower.includes('data')) crewId = 'data';
-    else if (taskLower.includes('geordi')) crewId = 'geordi';
-    else if (taskLower.includes('spark')) crewId = 'spark';
-    else if (taskLower.includes('troi')) crewId = 'troi';
-    else if (taskLower.includes('barclay')) crewId = 'barclay';
-  }
-
-  // Default to 'unknown' if we can't determine
-  if (!crewId) {
-    crewId = 'unknown';
-    console.log('[SubagentTracker] Could not determine crew for task:', task?.substring(0, 50));
-  }
-
-  // Register in the store - the feed entry is created by gateway.ts
-  store.registerSubagent(sessionKey, crewId, task);
-
-  console.log(`[SubagentTracker] Tracked ${crewId} spawn:`, sessionKey.substring(0, 40) + '...');
+  // Phase 7: No-op — subagent tracking is now handled by gateway events
+  // via sessionsStore.ts
+  console.log('[SubagentTracker] trackSubagentSpawn is deprecated in Phase 7');
 }
 
 /**
  * Track a subagent completion event
- * Call this when a subagent announces completion
+ * @deprecated Gateway events now automatically handle subagent tracking
  */
 export function trackSubagentComplete(
-  sessionKey: string,
-  status: 'completed' | 'failed' | 'timeout' = 'completed'
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _sessionKey: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _status: 'completed' | 'failed' | 'timeout' = 'completed'
 ): void {
-  const store = useGatewayStore.getState();
-
-  // Update status to completing
-  store.updateSubagentStatus(sessionKey, 'completing');
-
-  // Get the mapping to determine crew
-  const mapping = getSubagentMapping(sessionKey);
-  const crewId = mapping?.crewId || 'unknown';
-
-  // Add completion to feed - Note: completion entry is already added by gateway.ts
-  // This is for tracking purposes only
-  const statusText = status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : 'timed out';
-  console.log(`[SubagentTracker] Tracked ${crewId} completion (${statusText})`);
-
-  // Mark as completed
-  store.updateSubagentStatus(sessionKey, 'completed');
-
-  console.log(`[SubagentTracker] Tracked ${crewId} completion (${status}):`, sessionKey.substring(0, 40) + '...');
+  // Phase 7: No-op — subagent tracking is now handled by gateway events
+  console.log('[SubagentTracker] trackSubagentComplete is deprecated in Phase 7');
 }
 
 /**
  * Parse an internal subagent announce event
- * This handles the runtime-generated completion events
+ * @deprecated Gateway events now automatically handle subagent tracking
  */
-export function handleSubagentAnnounce(event: {
-  source?: string;
-  sessionKey?: string;
-  sessionId?: string;
-  status?: string;
-  result?: string;
-}): void {
-  if (event.source !== 'subagent') return;
-
-  const sessionKey = event.sessionKey || '';
-  const status = event.status?.includes('success') ? 'completed' : 
-                 event.status?.includes('error') ? 'failed' : 
-                 event.status?.includes('timeout') ? 'timeout' : 'completed';
-
-  trackSubagentComplete(sessionKey, status);
+export function handleSubagentAnnounce(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _event: {
+    source?: string;
+    sessionKey?: string;
+    sessionId?: string;
+    status?: string;
+    result?: string;
+  }
+): void {
+  // Phase 7: No-op — subagent tracking is now handled by gateway events
+  console.log('[SubagentTracker] handleSubagentAnnounce is deprecated in Phase 7');
 }
 
 /**
  * Hook for components to track their own subagent spawns
- * Usage: const { trackSpawn } = useSubagentTracker();
+ * @deprecated Use sessionsStore hooks instead
  */
 export function useSubagentTracker() {
+  console.warn('[SubagentTracker] useSubagentTracker is deprecated in Phase 7');
   return {
     trackSpawn: trackSubagentSpawn,
     trackComplete: trackSubagentComplete,

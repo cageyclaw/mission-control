@@ -1,30 +1,57 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useGatewayStore } from './stores/gateway';
-import { connectGateway, startStatusPolling, stopStatusPolling } from './api/gateway';
-import { startHealthPolling, stopHealthPolling } from './api/status';
 import { stardate } from './utils/crew';
+import { useChatStore } from './stores/chat';
+import { useSessionsStore } from './stores/sessionsStore';
+import { startSpawnRegistryBridgePolling, stopSpawnRegistryBridgePolling } from './stores/crewRegistryStore';
+import { loadCrewConfig, wireCrewConfigRuntimeReload } from './config/crewConfig';
 import CrewRoster from './components/crew/CrewRoster';
 import CrewDetail from './components/crew/CrewDetail';
 import ActivityFeed from './components/feed/ActivityFeed';
 import ShipStatus from './components/panels/ShipStatus';
 import CostPanel from './components/panels/CostPanel';
 import NavBar from './components/layout/NavBar';
-import CostView from './components/views/CostView';
-import SystemView from './components/views/SystemView';
-import CrewView from './components/views/CrewView';
+import ViewErrorBoundary from './components/common/ViewErrorBoundary';
+const SystemView = lazy(() => import('./components/views/SystemView'));
+const CrewView = lazy(() => import('./components/views/CrewView'));
+const ChatView = lazy(() => import('./components/chat/ChatView'));
 
 function App() {
   const { activeView, connected } = useGatewayStore();
+  const initializeChat = useChatStore((state) => state.initialize);
+  const disconnectChat = useChatStore((state) => state.disconnect);
+  const initializeSessions = useSessionsStore((state) => state.initialize);
 
   useEffect(() => {
-    connectGateway();
-    startStatusPolling();
-    startHealthPolling();
+    // Phase 7: Native gateway client handles all connection state.
+    // Sessions are sourced from gateway events in sessionsStore.
+    // Health status comes from systemStore, no polling needed.
+    loadCrewConfig()
+      .catch((error) => {
+        console.warn('[CrewConfig] Initialization failed:', error);
+      })
+      .finally(() => {
+        wireCrewConfigRuntimeReload();
+        initializeSessions().catch((error) => {
+          console.warn('[Sessions] Initialization failed:', error);
+        });
+      });
+    startSpawnRegistryBridgePolling();
+    initializeChat().catch((error) => {
+      console.warn('[Chat] Initialization failed:', error);
+    });
+
     return () => {
-      stopStatusPolling();
-      stopHealthPolling();
+      disconnectChat();
+      stopSpawnRegistryBridgePolling();
     };
-  }, []);
+  }, [disconnectChat, initializeChat, initializeSessions]);
+
+  const lazyViewFallback = (
+    <div style={{ padding: 24, color: 'var(--occ-text-muted)', fontFamily: 'var(--occ-font-display)', letterSpacing: 1 }}>
+      Loading view...
+    </div>
+  );
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--occ-bg)' }}>
@@ -107,32 +134,23 @@ function App() {
           </>
         )}
         
-        {activeView === 'cost' && (
-          <main className="occ-center-panel" style={{ width: '100%' }}>
-            <div className="occ-center-panel__header">
-              <span className="occ-center-panel__header-number-left">47-40</span>
-              Cost Analysis
-              <span className="occ-center-panel__header-number-right">47-41</span>
-            </div>
-            <div className="occ-center-panel__content">
-              <CostView />
-            </div>
-          </main>
-        )}
-        
         {activeView === 'system' && (
           <main className="occ-center-panel" style={{ width: '100%' }}>
             <div className="occ-center-panel__header">
               <span className="occ-center-panel__header-number-left">47-50</span>
-              System Diagnostics
+              System Operations
               <span className="occ-center-panel__header-number-right">47-51</span>
             </div>
             <div className="occ-center-panel__content">
-              <SystemView />
+              <ViewErrorBoundary fallbackTitle="System view unavailable">
+                <Suspense fallback={lazyViewFallback}>
+                  <SystemView />
+                </Suspense>
+              </ViewErrorBoundary>
             </div>
           </main>
         )}
-        
+
         {activeView === 'crew' && (
           <main className="occ-center-panel" style={{ width: '100%' }}>
             <div className="occ-center-panel__header">
@@ -141,7 +159,31 @@ function App() {
               <span className="occ-center-panel__header-number-right">47-61</span>
             </div>
             <div className="occ-center-panel__content">
-              <CrewView />
+              <ViewErrorBoundary fallbackTitle="Crew view unavailable">
+                <Suspense fallback={lazyViewFallback}>
+                  <CrewView />
+                </Suspense>
+              </ViewErrorBoundary>
+            </div>
+          </main>
+        )}
+
+        {activeView === 'chat' && (
+          <main className="occ-center-panel" style={{ width: '100%' }}>
+            <div className="occ-center-panel__header">
+              <span className="occ-center-panel__header-number-left">47-70</span>
+              Command Chat
+              <span className="occ-center-panel__header-number-right">47-71</span>
+            </div>
+            <div className="occ-center-panel__content" style={{ padding: 0 }}>
+              <ViewErrorBoundary
+                fallbackTitle="Chat view unavailable"
+                fallbackMessage="The chat module failed to load. This is usually a chunk/network/base-path issue."
+              >
+                <Suspense fallback={lazyViewFallback}>
+                  <ChatView />
+                </Suspense>
+              </ViewErrorBoundary>
             </div>
           </main>
         )}

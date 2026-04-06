@@ -3,7 +3,11 @@ import { useGatewayStore } from '../../stores/gateway';
 import { getDisplayValues } from '../../utils/crew';
 import CrewCard from '../crew/CrewCard';
 
-const OCC_ORANGE = '#FF9900';
+/**
+ * STORES USED:
+ * - useGatewayStore: activeCrew (aggregated crew state for display)
+ * - Source of truth for crew data: crewRegistryStore, sessionsStore
+ */
 
 export default function CrewView() {
   const { activeCrew } = useGatewayStore();
@@ -34,40 +38,6 @@ export default function CrewView() {
         padding: '20px'
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: '24px',
-          borderBottom: '2px solid rgba(255, 153, 0, 0.5)',
-          paddingBottom: '12px'
-        }}
-      >
-        <span
-          style={{
-            fontSize: '14px',
-            fontWeight: 700,
-            color: OCC_ORANGE,
-            marginRight: '12px',
-            fontFamily: '"Antonio", sans-serif'
-          }}
-        >
-          47-60
-        </span>
-        <span
-          style={{
-            fontSize: '18px',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '2px',
-            color: OCC_ORANGE
-          }}
-        >
-          Crew Context Monitor
-        </span>
-      </div>
-
       {/* Crew Cards */}
       <div
         style={{

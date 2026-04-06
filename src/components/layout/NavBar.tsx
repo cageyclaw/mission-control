@@ -3,6 +3,12 @@ import { useGatewayStore } from '../../stores/gateway';
 import ContextMeter from './ContextMeter';
 import SettingsDialog from './SettingsDialog';
 import type { View } from '../../api/types';
+import { confirmControlAction, reloadControlApp, runRedAlertSequence, showControlNotice } from '../../api/control';
+
+/**
+ * STORES USED:
+ * - useGatewayStore: activeView (current navigation), setActiveView, qContextData
+ */
 
 interface NavItem {
   id: View;
@@ -15,8 +21,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'home', label: 'MAIN', sublabel: 'BRIDGE', color: 'orange', number: '47-91' },
   { id: 'crew', label: 'CREW', color: 'purple', number: '47-92' },
-  { id: 'cost', label: 'SYSTEMS', color: 'cyan', number: '47-93' },
-  { id: 'system', label: 'DIAG', sublabel: 'NOSTICS', color: 'yellow', number: '47-94' },
+  { id: 'system', label: 'SYSTEM', color: 'cyan', number: '47-93' },
+  { id: 'chat', label: 'CHAT', color: 'yellow', number: '47-94' },
 ];
 
 export default function NavBar() {
@@ -62,19 +68,29 @@ export default function NavBar() {
       {/* Action buttons */}
       <div className="occ-bottom-bar__right">
         <button className="occ-action-button occ-action-button--red" onClick={async () => {
-          if (confirm('🔴 RED ALERT 🔴\n\nThis will:\n1. End all active sessions\n2. Write session memory to daily log\n3. Restart the OpenClaw gateway\n\nContinue?')) {
-            try {
-              // 1. End all sessions
-              await fetch('/api/session/end', { method: 'POST' });
-              // 2. Write memory
-              await fetch('/api/memory/flush', { method: 'POST' });
-              // 3. Restart gateway
-              await fetch('/api/gateway/restart', { method: 'POST' });
-              alert('✅ RED ALERT executed!\nSessions ended, gateway restarting...');
-            } catch (err) {
-              console.error('RED ALERT failed:', err);
-              alert('❌ RED ALERT failed. Check console.');
-            }
+          const confirmed = await confirmControlAction({
+            title: 'RED ALERT',
+            message: 'Execute emergency control sequence?',
+            detail: 'This will end active sessions, flush memory to daily log, and restart the OpenClaw gateway.',
+            confirmLabel: 'Execute',
+            cancelLabel: 'Cancel',
+          });
+          if (!confirmed) return;
+
+          try {
+            await runRedAlertSequence();
+            await showControlNotice({
+              title: 'RED ALERT Complete',
+              message: 'Emergency control sequence completed.',
+              detail: 'Sessions ended and gateway restart requested.',
+            });
+          } catch (err) {
+            console.error('RED ALERT failed:', err);
+            await showControlNotice({
+              title: 'RED ALERT Failed',
+              message: 'Emergency control sequence failed.',
+              detail: 'Check proxy/gateway logs for details.',
+            });
           }
         }}>
           <span className="occ-action-button__number">47-99</span>
@@ -84,7 +100,7 @@ export default function NavBar() {
           <span className="occ-action-button__number">47-A0</span>
           <span>SETTINGS</span>
         </button>
-        <button className="occ-action-button occ-action-button--orange" onClick={() => window.location.reload()}>
+        <button className="occ-action-button occ-action-button--orange" onClick={() => { void reloadControlApp(); }}>
           <span className="occ-action-button__number">47-A1</span>
           <span>REFRESH</span>
         </button>

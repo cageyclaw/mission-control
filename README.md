@@ -1,73 +1,65 @@
-# React + TypeScript + Vite
+# Mission Control (OCC)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+OpenClaw Command Center web/Electron UI.
 
-Currently, two official plugins are available:
+## Backend redesign freeze notice (Phase 0)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This repo is in OCC backend redesign mode.
 
-## React Compiler
+- New feature work on current proxy-based backend plumbing is **frozen**.
+- Current proxy/chat/session/status hybrid plumbing should be treated as **legacy**.
+- See docs:
+  - `docs/occ-phase0-freeze-legacy-note.md`
+  - `docs/occ-phase0-baseline-snapshot.md`
+  - `docs/occ-openclaw-ui-reference-paths.md`
+  - `docs/occ-backend-architecture-baseline.md`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Auto-starting the chat proxy
 
-## Expanding the ESLint configuration
+The chat UI needs `proxy-server.mjs` running (port `5181`).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Dev / Vite
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Use the new wrapper scripts so proxy + Vite start together:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev:with-proxy
+# or
+npm run preview:with-proxy
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+What this does:
+- starts `proxy-server.mjs` if it is not already healthy
+- starts Vite (`dev` or `preview`)
+- shuts down spawned proxy when Vite exits
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+> Existing scripts (`npm run dev`, `npm run preview`) still work, but they do **not** auto-start the proxy.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Production service (systemd)
+
+A systemd unit template is included at:
+
+`systemd/openclaw-occ-proxy.service`
+
+Example one-time setup (Linux host):
+
+```bash
+sudo cp systemd/openclaw-occ-proxy.service /etc/systemd/system/openclaw-occ-proxy@.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now openclaw-occ-proxy@<linux-user>
+sudo systemctl status openclaw-occ-proxy@<linux-user>
 ```
+
+Before enabling, edit the unit file paths if needed:
+- `WorkingDirectory=/opt/mission-control`
+- `ExecStart=/usr/bin/node /opt/mission-control/proxy-server.mjs`
+
+## Quick verification
+
+After startup, confirm proxy is live:
+
+```bash
+curl -s http://127.0.0.1:5181/api/health
+```
+
+Expected: JSON health response and OCC chat status no longer stuck on `Proxy: Connecting`.

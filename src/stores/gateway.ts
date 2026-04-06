@@ -12,8 +12,9 @@ import type {
   CostSnapshot,
   StatusData,
 } from '../api/types';
-import { CREW_MEMBERS, detectCrew, registerSubagentWithDualIds, cleanupCompletedSubagents, type SubagentMapping } from '../utils/crew';
-import { resolveMetricsUrl } from '../config';
+import { getConfiguredCrewMembers, type SubagentMapping } from '../utils/crew';
+import { startSpawnRegistryBridgePolling, useCrewRegistryStore } from './crewRegistryStore';
+import { requestAuthoritativeSessionsRefresh } from './authoritativeRefresh';
 
 interface GatewayStore {
   // Connection
@@ -68,14 +69,6 @@ interface GatewayStore {
     tokensRemaining: number;
   } | null;
 
-  // System Metrics
-  systemMetrics: {
-    cpu: { usage: number; loadAverage: number[] };
-    memory: { used: number; total: number; percent: number };
-    disk: { used: number; total: number; percent: number };
-    timestamp: number;
-  } | null;
-
   // Actions
   setConnected: (connected: boolean) => void;
   updateHealth: (health: GatewayHealth) => void;
@@ -90,9 +83,6 @@ interface GatewayStore {
   setFeedFilter: (filter: { types?: string[]; crewIds?: string[]; searchQuery?: string }) => void;
   setActiveView: (view: View) => void;
   selectCrew: (id: string | null) => void;
-
-  // System Metrics
-  fetchSystemMetrics: () => Promise<void>;
 }
 
 interface CrewRuntimeStatus {
@@ -105,6 +95,18 @@ interface CrewRuntimeStatus {
 
 const ACTIVE_WINDOW_MS = 120000;
 const IDLE_WINDOW_MS = 600000;
+const ACTIVE_VIEW_STORAGE_KEY = 'occ.activeView';
+
+function getInitialView(): View {
+  if (typeof window === 'undefined') return 'home';
+
+  try {
+    const stored = window.localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY);
+    return stored === 'home' || stored === 'crew' || stored === 'system' || stored === 'chat' ? stored : 'home';
+  } catch {
+    return 'home';
+  }
+}
 
 function getSessionUpdatedAt(session: Session): number {
   if (typeof session.updatedAt === 'number' && Number.isFinite(session.updatedAt) && session.updatedAt > 0) {
@@ -165,35 +167,40 @@ function inferCrewStatusFromSession(session: Session, spawnedStatus?: SubagentMa
 function getAuthoritativeQSession(qSessions: Session[]): Session | undefined {
   if (qSessions.length === 0) return undefined;
 
-  // DEBUG: Log all Q sessions for troubleshooting
-  console.log('[DEBUG] getAuthoritativeQSession called with', qSessions.length, 'sessions:');
-  qSessions.forEach((s, i) => {
-    console.log(`  [${i}] key: ${s.key}, model: ${s.model}, tokens: ${s.totalTokens}, age: ${s.age}`);
-  });
-
-  // Find telegram sessions and pick the one with highest token count (most active)
+  // Prefer the active telegram/direct main session when present.
   const telegramSessions = qSessions.filter(s => s.key.startsWith('agent:main:telegram:'));
   if (telegramSessions.length > 0) {
-    // Sort by token count descending (most active = most tokens used)
-    const sortedByTokens = telegramSessions.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-    console.log('[DEBUG] Selected telegram session by token count:', sortedByTokens[0].key, 'model:', sortedByTokens[0].model);
-    return sortedByTokens[0];
+    return [...telegramSessions].sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0))[0];
   }
 
-  // Fallback: find any main session with highest token count
+  // Fallback: any main-scoped non-subagent session, favoring the one with the most activity.
   const mainScoped = qSessions.filter(s => s.key.startsWith('agent:main:') && !s.key.includes('subagent'));
   if (mainScoped.length > 0) {
-    const sortedByTokens = mainScoped.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-    console.log('[DEBUG] Selected main session by token count:', sortedByTokens[0].key, 'model:', sortedByTokens[0].model);
-    return sortedByTokens[0];
+    return [...mainScoped].sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0))[0];
   }
 
-  // Last resort: most recently updated
-  const latest = qSessions.reduce((latest, current) =>
+  // Last resort: most recently updated.
+  return qSessions.reduce((latest, current) =>
     getSessionUpdatedAt(current) > getSessionUpdatedAt(latest) ? current : latest
   );
-  console.log('[DEBUG] Fallback to latest updated session:', latest.key, 'model:', latest.model);
-  return latest;
+}
+
+let spawnBridgeBootstrapped = false;
+
+function extractRequestIdFromSession(session: Session): string | undefined {
+  const candidates: string[] = [];
+  if (Array.isArray(session.flags)) {
+    candidates.push(...session.flags);
+  }
+
+  const maybe = session as Session & { requestId?: string; task?: string; label?: string };
+  if (typeof maybe.requestId === 'string') candidates.push(maybe.requestId);
+  if (typeof maybe.task === 'string') candidates.push(maybe.task);
+  if (typeof maybe.label === 'string') candidates.push(maybe.label);
+
+  const merged = candidates.join(' ');
+  const uuidMatch = merged.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+  return uuidMatch?.[0];
 }
 
 export const useGatewayStore = create<GatewayStore>((set, get) => ({
@@ -202,7 +209,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   gatewayHealth: null,
   gatewayReady: null,
   sessions: [],
-  activeCrew: CREW_MEMBERS.map(c => ({ ...c, status: 'offline' })),
+  activeCrew: getConfiguredCrewMembers().map(c => ({ ...c, status: 'offline' })),
   subagentMappings: new Map(),
   activeTasks: new Map(),
   memory: null,
@@ -212,12 +219,11 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   feed: [],
   maxFeedEntries: 100,
   feedFilter: {},
-  activeView: 'home',
+  activeView: getInitialView(),
   selectedCrewId: null,
   dailyCost: 0,
   costHistory: [],
   qContextData: null,
-  systemMetrics: null,
 
   // Actions
   setConnected: (connected) => set({ connected }),
@@ -229,6 +235,9 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   registerSubagent: (sessionKey, crewId, task, sessionAge, spawnTimestamp) => {
     const sessionId = sessionKey.split(':').pop() || sessionKey;
     const resolvedSpawnTimestamp = spawnTimestamp ?? (Date.now() - (sessionAge || 0));
+    // Intentional: registry writes are owned by the spawn orchestrator path only.
+    // Gateway store keeps a local compatibility mapping for legacy UI consumers.
+
     const mapping: SubagentMapping = {
       sessionId,
       crewId,
@@ -240,8 +249,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       subagentMappings: new Map(state.subagentMappings).set(sessionId, mapping),
     }));
 
-    // Add spawn entry to activity feed
-    const crew = CREW_MEMBERS.find(c => c.id === crewId);
+    const crew = getConfiguredCrewMembers().find(c => c.id === crewId);
     if (crew) {
       get().addFeedEntry({
         id: crypto.randomUUID(),
@@ -267,88 +275,27 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   },
 
   updateStatus: (status) => {
-    const sessions = status.sessions?.recent ?? [];
-    const { subagentMappings, feed } = get();
-
-    // Clean up old completed subagents periodically (once per 5 calls)
-    if (Math.random() < 0.2) {
-      cleanupCompletedSubagents(3600000); // 1 hour TTL
+    if (!spawnBridgeBootstrapped) {
+      spawnBridgeBootstrapped = true;
+      startSpawnRegistryBridgePolling();
     }
+
+    const sessions = status.sessions?.recent ?? [];
+    const { subagentMappings } = get();
 
     // Get current active crew for last known value preservation
     const { activeCrew: currentActiveCrew } = get();
 
-    // Auto-detect new subagent sessions and register them
+    // Explicit registration only; never infer unregistered sessions.
     const newMappings = new Map(subagentMappings);
-    
-    sessions.forEach(session => {
-      if (session.key.includes('subagent')) {
-        const keyUuid = session.key.split(':').pop();
-        const sessionId = session.sessionId;
-        
-        if (keyUuid && !newMappings.has(keyUuid) && !newMappings.has(sessionId)) {
-          // Try to infer crew from session context or recent feed
-          let crewId: string | null = null;
-          let task: string | undefined;
-          
-          // Check if this session appears in a recent spawn entry
-          const recentSpawn = feed.find(e => 
-            e.type === 'spawn' && 
-            e.timestamp > Date.now() - 60000 && // Within last minute
-            e.crewId !== 'unknown'
-          );
-          if (recentSpawn) {
-            crewId = recentSpawn.crewId;
-            task = recentSpawn.task;
-          }
-          
-          // If no spawn entry, try to infer from task using detectCrew
-          if (!crewId && keyUuid) {
-            // detectCrew will auto-register if it can infer a crew
-            const pendingCrew = detectCrew(session.key, undefined, sessionId);
-            if (pendingCrew && pendingCrew.id !== 'unknown') {
-              crewId = pendingCrew.id;
-            }
-          }
-          
-          // Fallback: mark as 'unknown' subagent
-          if (!crewId) {
-            crewId = 'unknown';
-          }
-
-          const sessionAge = session.age || 0;
-          const spawnTimestamp = Date.now() - sessionAge;
-          get().registerSubagent(session.key, crewId, task, sessionAge, spawnTimestamp);
-
-          const mapping: SubagentMapping = {
-            sessionId,
-            crewId,
-            spawnedAt: spawnTimestamp,
-            task,
-            status: 'active',
-          };
-          newMappings.set(keyUuid, mapping);
-          newMappings.set(sessionId, mapping);
-          
-          // Also register in the utility registry
-          registerSubagentWithDualIds(keyUuid, sessionId, crewId, task);
-          
-          console.log(`[GatewayStore] Auto-registered ${crewId} for session ${keyUuid.substring(0, 8)}...`);
-        }
-      }
-    });
+    const registry = useCrewRegistryStore.getState();
+    let mappingsChanged = false;
 
     // Build crew status with deterministic session matching
     const crewStatusMap = new Map<string, CrewRuntimeStatus>();
 
     // First: Handle Q using the authoritative main Q session for model/context display
     const qSessions = sessions.filter(s => s.agentId === 'main' && !s.key.includes('subagent'));
-    
-    // DEBUG: Log all filtered Q sessions
-    console.log('[DEBUG] updateStatus: Found', qSessions.length, 'Q sessions (agentId=main, not subagent):');
-    qSessions.forEach((s, i) => {
-      console.log(`  [${i}] key: ${s.key}, model: ${s.model}, totalTokens: ${s.totalTokens}, age: ${s.age}`);
-    });
     
     const qModelSession = getAuthoritativeQSession(qSessions);
 
@@ -370,11 +317,43 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       const sessionId = session.sessionId;
 
       // Look up this specific session in the registry (supports both UUID forms)
-      const mappingByKey = keyUuid ? newMappings.get(keyUuid) : undefined;
-      const mappingBySessionId = newMappings.get(sessionId);
-      const actualMapping = mappingByKey || mappingBySessionId;
+      let reg = registry.getRegistrationBySession(sessionId, session.key);
+      if (!reg) {
+        const requestId = extractRequestIdFromSession(session);
+        if (requestId) {
+          registry.confirmRegistration({
+            sessionId,
+            sessionKey: session.key,
+            requestId,
+            modelActive: session.model,
+          });
+          reg = registry.getRegistrationBySession(sessionId, session.key);
+        }
+      }
 
-      if (!actualMapping) return;
+      if (!reg) return;
+
+      const actualMapping: SubagentMapping = {
+        sessionId,
+        crewId: reg.crewId,
+        spawnedAt: reg.spawnedAt,
+        task: reg.task,
+        status: reg.status === 'completed' ? 'completed' : 'active',
+      };
+
+      if (keyUuid) {
+        const previous = newMappings.get(keyUuid);
+        if (!previous || JSON.stringify(previous) !== JSON.stringify(actualMapping)) {
+          mappingsChanged = true;
+        }
+        newMappings.set(keyUuid, actualMapping);
+      }
+
+      const previousSessionMapping = newMappings.get(sessionId);
+      if (!previousSessionMapping || JSON.stringify(previousSessionMapping) !== JSON.stringify(actualMapping)) {
+        mappingsChanged = true;
+      }
+      newMappings.set(sessionId, actualMapping);
 
       const updatedAt = getSessionUpdatedAt(session);
       const crewStatus: CrewMember['status'] = inferCrewStatusFromSession(session, actualMapping.status);
@@ -394,7 +373,7 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
       });
     });
 
-    const activeCrew = CREW_MEMBERS.map(c => {
+    const activeCrew = getConfiguredCrewMembers().map(c => {
       const crewStatus = crewStatusMap.get(c.id);
       const currentMember = currentActiveCrew.find(m => m.id === c.id);
 
@@ -434,6 +413,16 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
         tokensRemaining: qModelSession.remainingTokens ?? 0,
       } : null,
     });
+
+    // When mappings hydrate from the active status path, force an authoritative remap.
+    // If sessionsStore is not initialized yet, this request is deferred and flushed on init.
+    if (mappingsChanged) {
+      queueMicrotask(() => {
+        requestAuthoritativeSessionsRefresh().catch((error) => {
+          console.warn('[GatewayStore] Failed to trigger sessions refresh after mapping hydration:', error);
+        });
+      });
+    }
   },
 
   addFeedEntry: (entry) => {
@@ -484,22 +473,16 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
     set({ feedFilter: filter });
   },
 
-  setActiveView: (view) => set({ activeView: view }),
+  setActiveView: (view) => {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, view);
+      } catch {
+        // Ignore persistence failures and still update in-memory UI state.
+      }
+    }
+    set({ activeView: view });
+  },
 
   selectCrew: (id) => set({ selectedCrewId: id }),
-
-  // Fetch system metrics from standalone server
-  fetchSystemMetrics: async () => {
-    try {
-      const response = await fetch(await resolveMetricsUrl('/api/system/metrics'));
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      const metrics = await response.json();
-      set({ systemMetrics: metrics });
-    } catch (error) {
-      // Silently fail - system metrics server may not be running
-      console.log('[SystemMetrics] Fetch failed:', error);
-    }
-  },
 }));
