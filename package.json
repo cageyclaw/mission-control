@@ -84,13 +84,12 @@
         "deb"
       ],
       "executableName": "occ",
-      "category": "System;Utility",
       "icon": "build/icons",
       "desktop": {
         "entry": {
           "Name": "OCC",
           "Icon": "occ",
-          "Categories": "System;Utility;",
+          "Categories": "System;",
           "StartupWMClass": "occ"
         }
       }
